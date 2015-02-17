@@ -15,7 +15,7 @@
 #if __GNUC__ >=3
 #pragma GCC system_header
 #endif
-
+#define _WIN32_WINNT 0x500
 /* translate GCC target defines to MS equivalents. Keep this synchronized
    with winnt.h. */
 #if defined(__i686__) && !defined(_M_IX86)
@@ -44,70 +44,11 @@
 #include <winresrc.h>
 #else
 
-#ifdef __GNUC__
-#ifndef NONAMELESSUNION
-#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95) 
-#define _ANONYMOUS_UNION __extension__
-#define _ANONYMOUS_STRUCT __extension__
-#else
-#if defined(__cplusplus)
-#define _ANONYMOUS_UNION __extension__
-#endif /* __cplusplus */
-#endif /* __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95) */
-#endif /* NONAMELESSUNION */
-#elif defined(__WATCOMC__)
-#define _ANONYMOUS_UNION
-#define _ANONYMOUS_STRUCT
-#endif /* __GNUC__/__WATCOMC__ */
-
-#ifndef _ANONYMOUS_UNION
-#define _ANONYMOUS_UNION
-#define _UNION_NAME(x) x
-#define DUMMYUNIONNAME	u
-#define DUMMYUNIONNAME2	u2
-#define DUMMYUNIONNAME3	u3
-#define DUMMYUNIONNAME4	u4
-#define DUMMYUNIONNAME5	u5
-#define DUMMYUNIONNAME6	u6
-#define DUMMYUNIONNAME7	u7
-#define DUMMYUNIONNAME8	u8
-#else
-#define _UNION_NAME(x)
-#define DUMMYUNIONNAME
-#define DUMMYUNIONNAME2
-#define DUMMYUNIONNAME3
-#define DUMMYUNIONNAME4
-#define DUMMYUNIONNAME5
-#define DUMMYUNIONNAME6
-#define DUMMYUNIONNAME7
-#define DUMMYUNIONNAME8
-#endif
-#ifndef _ANONYMOUS_STRUCT
-#define _ANONYMOUS_STRUCT
-#define _STRUCT_NAME(x) x
-#define DUMMYSTRUCTNAME	s
-#define DUMMYSTRUCTNAME2 s2
-#define DUMMYSTRUCTNAME3 s3
-#else
-#define _STRUCT_NAME(x)
-#define DUMMYSTRUCTNAME
-#define DUMMYSTRUCTNAME2
-#define DUMMYSTRUCTNAME3
-#endif
-
-#ifndef NO_STRICT
-#ifndef STRICT
-#define STRICT 1
-#endif
-#endif
-
 #include <stdarg.h>
 #include <windef.h>
 #include <wincon.h>
-#include <basetyps.h>
-#include <excpt.h>
 #include <winbase.h>
-#ifndef _WINGDI_H
+#if !(defined NOGDI || defined  _WINGDI_H)
 #include <wingdi.h>
 #endif
 #ifndef _WINUSER_H
@@ -130,18 +71,21 @@
 #endif
 
 #ifndef WIN32_LEAN_AND_MEAN
-#include <commdlg.h>
 #include <cderr.h>
 #include <dde.h>
 #include <ddeml.h>
 #include <dlgs.h>
+#include <imm.h>
 #include <lzexpand.h>
 #include <mmsystem.h>
 #include <nb30.h>
 #include <rpc.h>
 #include <shellapi.h>
 #include <winperf.h>
+#ifndef NOGDI
+#include <commdlg.h>
 #include <winspool.h>
+#endif
 #if defined(Win32_Winsock)
 #warning "The  Win32_Winsock macro name is deprecated.\
     Please use __USE_W32_SOCKETS instead"
@@ -161,6 +105,17 @@
 #include <winsock.h>
 #endif /*  (_WIN32_WINNT >= 0x0400) */
 #endif
+#ifndef NOGDI
+/* In older versions we disallowed COM declarations in __OBJC__
+   because of conflicts with @interface directive.  Define _OBJC_NO_COM
+   to keep this behaviour.  */ 
+#if !defined (_OBJC_NO_COM) 
+#if (__GNUC__ >= 3) || defined (__WATCOMC__)
+#include <ole2.h>
+#endif
+#endif /* _OBJC_NO_COM */
+#endif
+
 #endif /* WIN32_LEAN_AND_MEAN */
 
 #endif /* RC_INVOKED */

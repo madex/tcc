@@ -1,6 +1,7 @@
 #ifndef _WINGDI_H
 #define _WINGDI_H
-#if __GNUC__ >=3
+#define _WINGDI_
+#if __GNUC__ >= 3
 #pragma GCC system_header
 #endif
 
@@ -8,7 +9,14 @@
 extern "C" {
 #endif
 
+#ifndef WINGDIAPI
+#ifdef __W32API_USE_DLLIMPORT__
+#define WINGDIAPI DECLSPEC_IMPORT
+#else
 #define WINGDIAPI
+#endif
+#endif
+
 #define BI_RGB 0
 #define BI_RLE8 1
 #define BI_RLE4 2
@@ -154,6 +162,10 @@ extern "C" {
 #define EMR_PIXELFORMAT 104
 #define ENHMETA_SIGNATURE 1179469088
 #define EPS_SIGNATURE 0x46535045
+#if (_WIN32_WINNT >= 0x0500)
+#define FR_PRIVATE 0x10
+#define FR_NOT_ENUM 0x20
+#endif
 #define META_SETBKCOLOR	0x201
 #define META_SETBKMODE	0x102
 #define META_SETMAPMODE	0x103
@@ -245,6 +257,7 @@ extern "C" {
 #define PFD_NEED_SYSTEM_PALETTE	0x00000100
 #define PFD_SWAP_EXCHANGE	0x00000200
 #define PFD_SWAP_COPY	0x00000400
+#define PFD_SWAP_LAYER_BUFFERS	0x00000800
 #define PFD_GENERIC_ACCELERATED	0x00001000
 #define PFD_DEPTH_DONTCARE	0x20000000
 #define PFD_DOUBLEBUFFER_DONTCARE	0x40000000
@@ -254,21 +267,23 @@ extern "C" {
 #define SP_OUTOFMEMORY	(-5)
 #define SP_USERABORT	(-3)
 #define SP_APPABORT	(-2)
-#define BLACKNESS	0x42
-#define NOTSRCERASE	0x1100A6
-#define NOTSRCCOPY	0x330008
-#define SRCERASE	0x440328
-#define DSTINVERT	0x550009
-#define PATINVERT	0x5A0049
-#define SRCINVERT	0x660046
-#define SRCAND	0x8800C6
-#define MERGEPAINT	0xBB0226
-#define MERGECOPY	0xC000CA
-#define SRCCOPY 0xCC0020
-#define SRCPAINT	0xEE0086
-#define PATCOPY	0xF00021
-#define PATPAINT	0xFB0A09
-#define WHITENESS	0xFF0062
+#define BLACKNESS	0x00000042
+#define NOTSRCERASE	0x001100A6
+#define NOTSRCCOPY	0x00330008
+#define SRCERASE	0x00440328
+#define DSTINVERT	0x00550009
+#define PATINVERT	0x005A0049
+#define SRCINVERT	0x00660046
+#define SRCAND	0x008800C6
+#define MERGEPAINT	0x00BB0226
+#define MERGECOPY	0x00C000CA
+#define SRCCOPY 0x00CC0020
+#define SRCPAINT	0x00EE0086
+#define PATCOPY	0x00F00021
+#define PATPAINT	0x00FB0A09
+#define WHITENESS	0x00FF0062
+#define CAPTUREBLT	0x40000000
+#define NOMIRRORBITMAP	0x80000000
 #define R2_BLACK	1
 #define R2_COPYPEN	13
 #define R2_MASKNOTPEN	3
@@ -334,9 +349,6 @@ extern "C" {
 #define JOHAB_CHARSET	130
 #define VIETNAMESE_CHARSET	163
 #define MAC_CHARSET 77
-#define BALTIC_CHARSET 186
-#define JOHAB_CHARSET 130
-#define VIETNAMESE_CHARSET 163
 #define OUT_DEFAULT_PRECIS	0
 #define OUT_STRING_PRECIS	1
 #define OUT_CHARACTER_PRECIS	2
@@ -547,6 +559,21 @@ extern "C" {
 #define DC_DATATYPE_PRODUCED	21
 #define DC_MANUFACTURER	23
 #define DC_MODEL	24
+#if (WINVER >= 0x0500)
+#define DC_PERSONALITY	25
+#define DC_PRINTRATE	26
+#define DC_PRINTRATEUNIT	27
+#define DC_PRINTERMEM	28
+#define DC_MEDIAREADY	29
+#define DC_STAPLE	30
+#define DC_PRINTRATEPPM	31
+#define DC_COLORDEVICE	32
+#define DC_NUP	33
+#endif
+#if (WINVER >= 0x0501)
+#define DC_MEDIATYPENAMES	34
+#define DC_MEDIATYPES	35
+#endif
 #define DCBA_FACEUPNONE	0
 #define DCBA_FACEUPCENTER	1
 #define DCBA_FACEUPLEFT	2
@@ -557,10 +584,18 @@ extern "C" {
 #define DCBA_FACEDOWNRIGHT	259
 #define FLOODFILLBORDER 0
 #define FLOODFILLSURFACE 1
-#define ETO_CLIPPED 4
-#define ETO_GLYPH_INDEX 16
-#define ETO_OPAQUE 2
-#define ETO_RTLREADING 128
+#define ETO_CLIPPED 0x0004
+#define ETO_GLYPH_INDEX 0x0010
+#define ETO_OPAQUE 0x0002
+#define ETO_NUMERICSLATIN 0x0800
+#define ETO_NUMERICSLOCAL 0x0400
+#define ETO_RTLREADING 0x0080
+#if (_WIN32_WINNT >= 0x0400)
+#define ETO_IGNORELANGUAGE 0x1000
+#endif
+#if (_WIN32_WINNT >= 0x0500)
+#define ETO_PDY 0x2000
+#endif
 #define GDICOMMENT_WINDOWS_METAFILE (-2147483647)
 #define GDICOMMENT_BEGINGROUP 2
 #define GDICOMMENT_ENDGROUP 3
@@ -643,6 +678,20 @@ extern "C" {
 #define DESKTOPHORZRES 118
 #define DESKTOPVERTRES 117
 #define BLTALIGNMENT 119
+#if(WINVER >= 0x0500)
+#define SHADEBLENDCAPS 120
+#define SB_NONE 0x00
+#define SB_CONST_ALPHA 0x01
+#define SB_PIXEL_ALPHA 0x02
+#define SB_PREMULT_ALPHA 0x04
+#define SB_GRAD_RECT 0x10
+#define SB_GRAD_TRI 0x20
+#define COLORMGMTCAPS 121
+#define CM_NONE 0x00
+#define CM_DEVICE_ICM 0x01
+#define CM_GAMMA_RAMP 0x02
+#define CM_CMYK_COLOR 0x04
+#endif
 #define RASTERCAPS 38
 #define RC_BANDING 2
 #define RC_BITBLT 1
@@ -750,7 +799,9 @@ extern "C" {
 #define GGO_GRAY4_BITMAP 5
 #define GGO_GRAY8_BITMAP 6
 #define GGO_GLYPH_INDEX 128
+#if (WINVER >= 0x0500)
 #define GGO_UNHINTED 256
+#endif
 #define GM_COMPATIBLE 1
 #define GM_ADVANCED 2
 #define MM_ANISOTROPIC 8
@@ -794,9 +845,14 @@ extern "C" {
 #define SYSTEM_FONT 13
 #define SYSTEM_FIXED_FONT 16
 #define DEFAULT_PALETTE 15
-#define SYSPAL_NOSTATIC 2
-#define SYSPAL_STATIC 1
+#if (_WIN32_WINNT >= 0x0500)
+#define DC_BRUSH	18
+#define DC_PEN	19
+#endif
 #define SYSPAL_ERROR 0
+#define SYSPAL_STATIC 1
+#define SYSPAL_NOSTATIC 2
+#define SYSPAL_NOSTATIC256 3 
 #define TA_BASELINE 24
 #define TA_BOTTOM 8
 #define TA_TOP 0
@@ -1006,7 +1062,61 @@ extern "C" {
 #define DMPAPER_A2	66
 #define DMPAPER_A3_TRANSVERSE	67
 #define DMPAPER_A3_EXTRA_TRANSVERSE	68
+#if (WINVER >= 0x0500)
+#define DMPAPER_DBL_JAPANESE_POSTCARD	69
+#define DMPAPER_A6	70
+#define DMPAPER_JENV_KAKU2	71
+#define DMPAPER_JENV_KAKU3	72
+#define DMPAPER_JENV_CHOU3	73
+#define DMPAPER_JENV_CHOU4	74
+#define DMPAPER_LETTER_ROTATED	75
+#define DMPAPER_A3_ROTATED	76
+#define DMPAPER_A4_ROTATED	77
+#define DMPAPER_A5_ROTATED	78
+#define DMPAPER_B4_JIS_ROTATED	79
+#define DMPAPER_B5_JIS_ROTATED	80
+#define DMPAPER_JAPANESE_POSTCARD_ROTATED	81
+#define DMPAPER_DBL_JAPANESE_POSTCARD_ROTATED	82
+#define DMPAPER_A6_ROTATED	83
+#define DMPAPER_JENV_KAKU2_ROTATED	84
+#define DMPAPER_JENV_KAKU3_ROTATED	85
+#define DMPAPER_JENV_CHOU3_ROTATED	86
+#define DMPAPER_JENV_CHOU4_ROTATED	87
+#define DMPAPER_B6_JIS	88
+#define DMPAPER_B6_JIS_ROTATED	89
+#define DMPAPER_12X11	90
+#define DMPAPER_JENV_YOU4	91
+#define DMPAPER_JENV_YOU4_ROTATED	92
+#define DMPAPER_P16K	93
+#define DMPAPER_P32K	94
+#define DMPAPER_P32KBIG	95
+#define DMPAPER_PENV_1	96
+#define DMPAPER_PENV_2	97
+#define DMPAPER_PENV_3	98
+#define DMPAPER_PENV_4	99
+#define DMPAPER_PENV_5	100
+#define DMPAPER_PENV_6	101
+#define DMPAPER_PENV_7	102
+#define DMPAPER_PENV_8	103
+#define DMPAPER_PENV_9	104
+#define DMPAPER_PENV_10	105
+#define DMPAPER_P16K_ROTATED	106
+#define DMPAPER_P32K_ROTATED	107
+#define DMPAPER_P32KBIG_ROTATED	108
+#define DMPAPER_PENV_1_ROTATED	109
+#define DMPAPER_PENV_2_ROTATED	110
+#define DMPAPER_PENV_3_ROTATED	111
+#define DMPAPER_PENV_4_ROTATED	112
+#define DMPAPER_PENV_5_ROTATED	113
+#define DMPAPER_PENV_6_ROTATED	114
+#define DMPAPER_PENV_7_ROTATED	115
+#define DMPAPER_PENV_8_ROTATED	116
+#define DMPAPER_PENV_9_ROTATED	117
+#define DMPAPER_PENV_10_ROTATED	118
+#define DMPAPER_LAST	118
+#else
 #define DMPAPER_LAST	68
+#endif
 #define DMPAPER_USER	256
 #define DMBIN_FIRST	1
 #define DMBIN_UPPER	1
@@ -1040,6 +1150,7 @@ extern "C" {
 #define DMTT_DOWNLOAD_OUTLINE	4
 #define DMCOLLATE_FALSE	0
 #define DMCOLLATE_TRUE	1
+#define DM_SPECVERSION	800
 #define DM_GRAYSCALE	1
 #define DM_INTERLACED	2
 #define DM_UPDATE	1
@@ -1050,30 +1161,46 @@ extern "C" {
 #define DM_IN_PROMPT	DM_PROMPT
 #define DM_OUT_BUFFER	DM_COPY
 #define DM_OUT_DEFAULT	DM_UPDATE
-#define DM_ORIENTATION 1
-#define DM_PAPERSIZE 2
-#define DM_PAPERLENGTH 4
-#define DM_PAPERWIDTH 8
-#define DM_SCALE 16
-#define DM_COPIES 256
-#define DM_DEFAULTSOURCE 512
-#define DM_PRINTQUALITY 1024
-#define DM_COLOR 2048
-#define DM_DUPLEX 4096
-#define DM_YRESOLUTION 8192
-#define DM_TTOPTION 16384
-#define DM_COLLATE 32768
-#define DM_FORMNAME 65536
-#define DM_LOGPIXELS 0x20000
-#define DM_BITSPERPEL 0x40000
-#define DM_PELSWIDTH 0x80000
-#define DM_PELSHEIGHT 0x100000
-#define DM_DISPLAYFLAGS 0x200000
-#define DM_DISPLAYFREQUENCY 0x400000
-#define DM_ICMMETHOD 0x800000
-#define DM_ICMINTENT 0x1000000
-#define DM_MEDIATYPE 0x2000000
-#define DM_DITHERTYPE 0x4000000
+#define DM_ORIENTATION 0x00000001
+#define DM_PAPERSIZE 0x00000002
+#define DM_PAPERLENGTH 0x00000004
+#define DM_PAPERWIDTH 0x00000008
+#define DM_SCALE 0x00000010
+#define DM_POSITION 0x00000020
+#define DM_COPIES 0x00000100
+#define DM_DEFAULTSOURCE 0x00000200
+#define DM_PRINTQUALITY 0x00000400
+#define DM_COLOR 0x00000800
+#define DM_DUPLEX 0x00001000
+#define DM_YRESOLUTION 0x00002000
+#define DM_TTOPTION 0x00004000
+#define DM_COLLATE 0x00008000
+#define DM_FORMNAME 0x00010000
+#define DM_LOGPIXELS 0x00020000
+#define DM_BITSPERPEL 0x00040000
+#define DM_PELSWIDTH 0x00080000
+#define DM_PELSHEIGHT 0x00100000
+#define DM_DISPLAYFLAGS 0x00200000
+#define DM_DISPLAYFREQUENCY 0x00400000
+#define DM_ICMMETHOD 0x00800000
+#define DM_ICMINTENT 0x01000000
+#define DM_MEDIATYPE 0x02000000
+#define DM_DITHERTYPE 0x04000000
+#if(WINVER >= 0x0500)
+#define DM_PANNINGWIDTH 0x08000000
+#define DM_PANNINGHEIGHT 0x10000000
+#endif
+#if(WINVER >= 0x0501)
+#define DM_DISPLAYFIXEDOUTPUT 0x20000000
+#define DM_DISPLAYORIENTATION 0x00000080
+#define DMDO_DEFAULT 0x00000000
+#define DMDO_90 0x00000001
+#define DMDO_180 0x00000002
+#define DMDO_270 0x00000003
+#define DMDFO_DEFAULT 0x00000000
+#define DMDFO_STRETCH 0x00000001
+#define DMDFO_CENTER 0x00000002
+#endif
 #define DMICMMETHOD_NONE	1
 #define DMICMMETHOD_SYSTEM	2
 #define DMICMMETHOD_DRIVER	3
@@ -1110,6 +1237,7 @@ extern "C" {
 #define TT_POLYGON_TYPE 24
 #define TT_PRIM_LINE 1
 #define TT_PRIM_QSPLINE 2
+#define TT_PRIM_CSPLINE 3 
 #define FONTMAPPER_MAX 10
 #define ENHMETA_STOCK_OBJECT 0x80000000
 #define WGL_FONT_LINES 0
@@ -1157,9 +1285,49 @@ extern "C" {
 #define WGL_SWAP_UNDERLAY13 0x10000000
 #define WGL_SWAP_UNDERLAY14 0x20000000
 #define WGL_SWAP_UNDERLAY15 0x40000000
-#define AC_SRC_OVER 0
+#define AC_SRC_OVER		0x00
+#define AC_SRC_ALPHA		0x01
+#define AC_SRC_NO_PREMULT_ALPHA	0x01
+#define AC_SRC_NO_ALPHA		0x02
+#define AC_DST_NO_PREMULT_ALPHA	0x10
+#define AC_DST_NO_ALPHA		0x20
 #define LAYOUT_RTL 1
 #define LAYOUT_BITMAPORIENTATIONPRESERVED 8
+#if (WINVER >= 0x0400)
+#define CS_ENABLE           0x00000001
+#define CS_DISABLE          0x00000002
+#define CS_DELETE_TRANSFORM 0x00000003
+#endif
+#if (WINVER >= 0x0500)
+#define GRADIENT_FILL_RECT_H 0x00
+#define GRADIENT_FILL_RECT_V 0x01
+#define GRADIENT_FILL_TRIANGLE 0x02
+#define GRADIENT_FILL_OP_FLAG 0xff
+#define COLORMATCHTOTARGET_EMBEDED 0x00000001
+#define CREATECOLORSPACE_EMBEDED   0x00000001
+#define SETICMPROFILE_EMBEDED      0x00000001
+#endif
+
+#define DISPLAY_DEVICE_ATTACHED_TO_DESKTOP 0x00000001
+#define DISPLAY_DEVICE_MULTI_DRIVER        0x00000002
+#define DISPLAY_DEVICE_PRIMARY_DEVICE      0x00000004
+#define DISPLAY_DEVICE_MIRRORING_DRIVER    0x00000008
+#define DISPLAY_DEVICE_VGA_COMPATIBLE      0x00000010
+#define DISPLAY_DEVICE_REMOVABLE           0x00000020
+#define DISPLAY_DEVICE_MODESPRUNED         0x08000000
+
+#if (_WIN32_WINNT >= 0x0500)
+#define NTM_NONNEGATIVE_AC  0x00010000
+#define NTM_PS_OPENTYPE     0x00020000
+#define NTM_TT_OPENTYPE     0x00040000
+#define NTM_MULTIPLEMASTER  0x00080000
+#define NTM_TYPE1           0x00100000
+#define NTM_DSIG            0x00200000
+#endif
+
+#if (_WIN32_WINNT >= 0x0500)
+#define GGI_MARK_NONEXISTING_GLYPHS 1
+#endif
 
 #ifndef RC_INVOKED
 typedef struct _ABC {
@@ -1193,7 +1361,7 @@ typedef struct tagRGBTRIPLE {
 	BYTE rgbtBlue;
 	BYTE rgbtGreen;
 	BYTE rgbtRed;
-} RGBTRIPLE;
+} RGBTRIPLE,*LPRGBTRIPLE;
 #pragma pack(pop)
 #pragma pack(push,2)
 typedef struct tagBITMAPFILEHEADER {
@@ -1226,7 +1394,7 @@ typedef struct tagRGBQUAD {
 	BYTE	rgbGreen;
 	BYTE	rgbRed;
 	BYTE	rgbReserved;
-} RGBQUAD;
+} RGBQUAD,*LPRGBQUAD;
 typedef struct tagBITMAPINFO {
 	BITMAPINFOHEADER bmiHeader;
 	RGBQUAD bmiColors[1];
@@ -1265,6 +1433,32 @@ typedef struct {
 	DWORD	bV4GammaGreen;
 	DWORD	bV4GammaBlue;
 } BITMAPV4HEADER,*LPBITMAPV4HEADER,*PBITMAPV4HEADER;
+typedef struct { 
+	DWORD	bV5Size; 
+	LONG	bV5Width; 
+	LONG	bV5Height; 
+	WORD	bV5Planes; 
+	WORD	bV5BitCount; 
+	DWORD	bV5Compression; 
+	DWORD	bV5SizeImage; 
+	LONG	bV5XPelsPerMeter; 
+	LONG	bV5YPelsPerMeter; 
+	DWORD	bV5ClrUsed; 
+	DWORD	bV5ClrImportant; 
+	DWORD	bV5RedMask; 
+	DWORD	bV5GreenMask; 
+	DWORD	bV5BlueMask; 
+	DWORD	bV5AlphaMask; 
+	DWORD	bV5CSType; 
+	CIEXYZTRIPLE bV5Endpoints; 
+	DWORD	bV5GammaRed; 
+	DWORD	bV5GammaGreen; 
+	DWORD	bV5GammaBlue; 
+	DWORD	bV5Intent; 
+	DWORD	bV5ProfileData; 
+	DWORD	bV5ProfileSize; 
+	DWORD	bV5Reserved; 
+} BITMAPV5HEADER,*LPBITMAPV5HEADER,*PBITMAPV5HEADER; 
 typedef struct tagFONTSIGNATURE {
 	DWORD	fsUsb[4];
 	DWORD	fsCsb[2];
@@ -1288,73 +1482,107 @@ typedef struct  tagCOLORADJUSTMENT {
 	SHORT	caColorfulness;
 	SHORT	caRedGreenTint;
 } COLORADJUSTMENT,*LPCOLORADJUSTMENT;
-typedef struct _devicemodeA {
-	BYTE dmDeviceName[CCHDEVICENAME];
-	WORD dmSpecVersion;
-	WORD dmDriverVersion;
-	WORD dmSize;
-	WORD dmDriverExtra;
-	DWORD dmFields;
-	short dmOrientation;
-	short dmPaperSize;
-	short dmPaperLength;
-	short dmPaperWidth;
-	short dmScale;
-	short dmCopies;
-	short dmDefaultSource;
-	short dmPrintQuality;
-	short dmColor;
-	short dmDuplex;
-	short dmYResolution;
-	short dmTTOption;
-	short dmCollate;
-	BYTE dmFormName[CCHFORMNAME];
-	WORD dmLogPixels;
-	DWORD dmBitsPerPel;
-	DWORD dmPelsWidth;
-	DWORD dmPelsHeight;
-	DWORD dmDisplayFlags;
-	DWORD dmDisplayFrequency;
-	DWORD dmICMMethod;
-	DWORD dmICMIntent;
-	DWORD dmMediaType;
-	DWORD dmDitherType;
-	DWORD dmICCManufacturer;
-	DWORD dmICCModel;
+typedef struct _devicemodeA { 
+  BYTE   dmDeviceName[CCHDEVICENAME]; 
+  WORD   dmSpecVersion; 
+  WORD   dmDriverVersion; 
+  WORD   dmSize; 
+  WORD   dmDriverExtra; 
+  DWORD  dmFields; 
+  _ANONYMOUS_UNION union {
+    _ANONYMOUS_STRUCT struct {
+      short dmOrientation;
+      short dmPaperSize;
+      short dmPaperLength;
+      short dmPaperWidth;
+      short dmScale; 
+      short dmCopies; 
+      short dmDefaultSource; 
+      short dmPrintQuality; 
+    } DUMMYSTRUCTNAME;
+    POINTL dmPosition;
+    DWORD  dmDisplayOrientation;
+    DWORD  dmDisplayFixedOutput;
+  } DUMMYUNIONNAME;
+
+  short  dmColor; 
+  short  dmDuplex; 
+  short  dmYResolution; 
+  short  dmTTOption; 
+  short  dmCollate; 
+  BYTE   dmFormName[CCHFORMNAME]; 
+  WORD   dmLogPixels; 
+  DWORD  dmBitsPerPel; 
+  DWORD  dmPelsWidth; 
+  DWORD  dmPelsHeight; 
+  _ANONYMOUS_UNION union {
+    DWORD  dmDisplayFlags; 
+    DWORD  dmNup;
+  } DUMMYUNIONNAME2;
+  DWORD  dmDisplayFrequency; 
+#if(WINVER >= 0x0400) 
+  DWORD  dmICMMethod;
+  DWORD  dmICMIntent;
+  DWORD  dmMediaType;
+  DWORD  dmDitherType;
+  DWORD  dmReserved1;
+  DWORD  dmReserved2;
+#if (WINVER >= 0x0500) || (_WIN32_WINNT >= 0x0400)
+  DWORD  dmPanningWidth;
+  DWORD  dmPanningHeight;
+#endif
+#endif /* WINVER >= 0x0400 */
 } DEVMODEA,*LPDEVMODEA,*PDEVMODEA;
-typedef struct _devicemodeW {
-	WCHAR dmDeviceName[CCHDEVICENAME];
-	WORD dmSpecVersion;
-	WORD dmDriverVersion;
-	WORD dmSize;
-	WORD dmDriverExtra;
-	DWORD dmFields;
-	short dmOrientation;
-	short dmPaperSize;
-	short dmPaperLength;
-	short dmPaperWidth;
-	short dmScale;
-	short dmCopies;
-	short dmDefaultSource;
-	short dmPrintQuality;
-	short dmColor;
-	short dmDuplex;
-	short dmYResolution;
-	short dmTTOption;
-	short dmCollate;
-	WCHAR dmFormName[CCHFORMNAME];
-	WORD dmLogPixels;
-	DWORD dmBitsPerPel;
-	DWORD dmPelsWidth;
-	DWORD dmPelsHeight;
-	DWORD dmDisplayFlags;
-	DWORD dmDisplayFrequency;
-	DWORD dmICMMethod;
-	DWORD dmICMIntent;
-	DWORD dmMediaType;
-	DWORD dmDitherType;
-	DWORD dmICCManufacturer;
-	DWORD dmICCModel;
+typedef struct _devicemodeW { 
+  WCHAR   dmDeviceName[CCHDEVICENAME]; 
+  WORD   dmSpecVersion; 
+  WORD   dmDriverVersion; 
+  WORD   dmSize; 
+  WORD   dmDriverExtra; 
+  DWORD  dmFields; 
+  _ANONYMOUS_UNION union {
+    _ANONYMOUS_STRUCT struct {
+      short dmOrientation;
+      short dmPaperSize;
+      short dmPaperLength;
+      short dmPaperWidth;
+      short dmScale; 
+      short dmCopies; 
+      short dmDefaultSource; 
+      short dmPrintQuality; 
+    } DUMMYSTRUCTNAME;
+    POINTL dmPosition;
+    DWORD  dmDisplayOrientation;
+    DWORD  dmDisplayFixedOutput;
+  } DUMMYUNIONNAME;
+
+  short  dmColor; 
+  short  dmDuplex; 
+  short  dmYResolution; 
+  short  dmTTOption; 
+  short  dmCollate; 
+  WCHAR  dmFormName[CCHFORMNAME]; 
+  WORD   dmLogPixels; 
+  DWORD  dmBitsPerPel; 
+  DWORD  dmPelsWidth; 
+  DWORD  dmPelsHeight; 
+  _ANONYMOUS_UNION union {
+    DWORD  dmDisplayFlags; 
+    DWORD  dmNup;
+  } DUMMYUNIONNAME2;
+  DWORD  dmDisplayFrequency; 
+#if(WINVER >= 0x0400) 
+  DWORD  dmICMMethod;
+  DWORD  dmICMIntent;
+  DWORD  dmMediaType;
+  DWORD  dmDitherType;
+  DWORD  dmReserved1;
+  DWORD  dmReserved2;
+#if (WINVER >= 0x0500) || (_WIN32_WINNT >= 0x0400)
+  DWORD  dmPanningWidth;
+  DWORD  dmPanningHeight;
+#endif
+#endif /* WINVER >= 0x0400 */
 } DEVMODEW,*LPDEVMODEW,*PDEVMODEW;
 typedef struct tagDIBSECTION {
 	BITMAP dsBm;
@@ -1365,9 +1593,9 @@ typedef struct tagDIBSECTION {
 } DIBSECTION;
 typedef struct _DOCINFOA {
 	int cbSize;
-	LPCTSTR lpszDocName;
-	LPCTSTR lpszOutput;
-	LPCTSTR lpszDatatype;
+	LPCSTR lpszDocName;
+	LPCSTR lpszOutput;
+	LPCSTR lpszDatatype;
 	DWORD fwType;
 } DOCINFOA,*LPDOCINFOA;
 typedef struct _DOCINFOW {
@@ -1401,7 +1629,7 @@ typedef struct  _XFORM {
 	FLOAT eM22;
 	FLOAT eDx;
 	FLOAT eDy;
-} XFORM,*LPXFORM;
+} XFORM,*PXFORM,*LPXFORM;
 typedef struct tagEMRBITBLT {
 	EMR emr;
 	RECTL rclBounds;
@@ -1423,7 +1651,7 @@ typedef struct tagLOGBRUSH {
 	UINT lbStyle;
 	COLORREF lbColor;
 	LONG lbHatch;
-} LOGBRUSH,*LPLOGBRUSH;
+} LOGBRUSH,*PLOGBRUSH,*LPLOGBRUSH;
 typedef LOGBRUSH PATTERN,*PPATTERN,*LPPATTERN;
 typedef struct tagEMRCREATEBRUSHINDIRECT {
 	EMR emr;
@@ -1499,7 +1727,7 @@ typedef struct tagLOGPEN {
 	UINT lopnStyle;
 	POINT lopnWidth;
 	COLORREF lopnColor;
-} LOGPEN,*LPLOGPEN;
+} LOGPEN,*PLOGPEN,*LPLOGPEN;
 typedef struct tagEMRCREATEPEN {
 	EMR emr;
 	DWORD ihPen;
@@ -1952,6 +2180,14 @@ typedef struct tagENHMETAHEADER {
 	DWORD nPalEntries;
 	SIZEL szlDevice;
 	SIZEL szlMillimeters;
+#if (WINVER >= 0x0400)
+	DWORD cbPixelFormat;
+	DWORD offPixelFormat;
+	DWORD bOpenGL;
+#endif
+#if (WINVER >= 0x0500)
+	SIZEL szlMicrometers;
+#endif
 } ENHMETAHEADER,*LPENHMETAHEADER;
 typedef struct tagMETARECORD {
 	DWORD rdSize;
@@ -2020,7 +2256,7 @@ typedef struct _RGNDATAHEADER {
 typedef struct _RGNDATA {
 	RGNDATAHEADER rdh;
 	char Buffer[1];
-} RGNDATA,*LPRGNDATA;
+} RGNDATA,*PRGNDATA, *LPRGNDATA;
 /* for GetRandomRgn */
 #define SYSRGN  4
 typedef struct tagGCP_RESULTSA {
@@ -2030,7 +2266,7 @@ typedef struct tagGCP_RESULTSA {
 	INT *lpDx;
 	INT *lpCaretPos;
 	LPSTR lpClass;
-	UINT *lpGlyphs;
+	LPWSTR lpGlyphs;
 	UINT nGlyphs;
 	UINT nMaxFit;
 } GCP_RESULTSA,*LPGCP_RESULTSA;
@@ -2041,7 +2277,7 @@ typedef struct tagGCP_RESULTSW {
 	INT *lpDx;
 	INT *lpCaretPos;
 	LPWSTR lpClass;
-	UINT *lpGlyphs;
+	LPWSTR lpGlyphs;
 	UINT nGlyphs;
 	UINT nMaxFit;
 } GCP_RESULTSW,*LPGCP_RESULTSW;
@@ -2052,6 +2288,21 @@ typedef struct _GLYPHMETRICS {
 	short gmCellIncX;
 	short gmCellIncY;
 } GLYPHMETRICS,*LPGLYPHMETRICS;
+#if (_WIN32_WINNT >= 0x0500)
+typedef struct tagWCRANGE
+{
+	WCHAR wcLow;
+	USHORT cGlyphs;
+} WCRANGE, *PWCRANGE, *LPWCRANGE;
+typedef struct tagGLYPHSET
+{
+	DWORD cbThis;
+	DWORD flAccel;
+	DWORD cGlyphsSupported;
+	DWORD cRanges;
+	WCRANGE ranges[1];
+} GLYPHSET, *PGLYPHSET, *LPGLYPHSET;
+#endif
 typedef struct tagKERNINGPAIR {
 	WORD wFirst;
 	WORD wSecond;
@@ -2148,7 +2399,7 @@ typedef struct _POLYTEXTA {
 	UINT uiFlags;
 	RECT rcl;
 	int *pdx;
-} POLYTEXTA;
+} POLYTEXTA, *PPOLYTEXTA, *LPPOLYTEXTA;
 typedef struct _POLYTEXTW {
 	int x;
 	int y;
@@ -2157,7 +2408,7 @@ typedef struct _POLYTEXTW {
 	UINT uiFlags;
 	RECT rcl;
 	int *pdx;
-} POLYTEXTW;
+} POLYTEXTW, *PPOLYTEXTW, *LPPOLYTEXTW;
 typedef struct tagPIXELFORMATDESCRIPTOR {
 	WORD nSize;
 	WORD nVersion;
@@ -2286,8 +2537,8 @@ typedef struct tagENUMLOGFONTEXA {
 typedef struct tagENUMLOGFONTEXW {
 	LOGFONTW elfLogFont;
 	WCHAR elfFullName[LF_FULLFACESIZE];
-	BYTE elfStyle[LF_FACESIZE];
-	BYTE elfScript[LF_FACESIZE];
+	WCHAR elfStyle[LF_FACESIZE];
+	WCHAR elfScript[LF_FACESIZE];
 } ENUMLOGFONTEXW,*LPENUMLOGFONTEXW;
 typedef struct tagPOINTFX {
 	FIXED x;
@@ -2346,6 +2597,59 @@ typedef struct _BLENDFUNCTION {
     BYTE SourceConstantAlpha;
     BYTE AlphaFormat; 
 } BLENDFUNCTION,*PBLENDFUNCTION,*LPBLENDFUNCTION; 
+#define MM_MAX_NUMAXES  16
+typedef struct _DESIGNVECTOR {
+	DWORD dvReserved;
+	DWORD dvNumAxes;
+	LONG dvValues[MM_MAX_NUMAXES];
+} DESIGNVECTOR, *PDESIGNVECTOR, FAR *LPDESIGNVECTOR;
+#if _WIN32_WINNT >= 0x0500
+typedef struct tagENUMLOGFONTEXDVA
+{
+	ENUMLOGFONTEXA elfEnumLogfontEx;
+	DESIGNVECTOR elfDesignVector;
+} ENUMLOGFONTEXDVA, *PENUMLOGFONTEXDVA, *LPENUMLOGFONTEXDVA;
+typedef struct tagENUMLOGFONTEXDVW
+{
+	ENUMLOGFONTEXW elfEnumLogfontEx;
+	DESIGNVECTOR elfDesignVector;
+} ENUMLOGFONTEXDVW, *PENUMLOGFONTEXDVW, *LPENUMLOGFONTEXDVW;
+#endif /* _WIN32_WINNT >= 0x0500 */
+typedef USHORT COLOR16;
+typedef struct _TRIVERTEX {
+	LONG x;
+	LONG y;
+	COLOR16 Red;
+	COLOR16 Green;
+	COLOR16 Blue;
+	COLOR16 Alpha;
+} TRIVERTEX, *PTRIVERTEX, *LPTRIVERTEX;
+typedef struct _GRADIENT_TRIANGLE {
+	ULONG Vertex1;
+	ULONG Vertex2;
+	ULONG Vertex3;
+} GRADIENT_TRIANGLE,*PGRADIENT_TRIANGLE,*LPGRADIENT_TRIANGLE;
+typedef struct _GRADIENT_RECT {
+	ULONG UpperLeft;
+	ULONG LowerRight;
+}GRADIENT_RECT,*PGRADIENT_RECT,*LPGRADIENT_RECT;
+typedef struct _DISPLAY_DEVICEA {
+  DWORD cb;
+  CHAR DeviceName[32];
+  CHAR DeviceString[128];
+  DWORD StateFlags;
+  CHAR DeviceID[128];
+  CHAR DeviceKey[128];
+} DISPLAY_DEVICEA, *PDISPLAY_DEVICEA, *LPDISPLAY_DEVICEA;
+typedef struct _DISPLAY_DEVICEW {
+  DWORD cb;
+  WCHAR DeviceName[32];
+  WCHAR DeviceString[128];
+  DWORD StateFlags;
+  WCHAR DeviceID[128];
+  WCHAR DeviceKey[128];
+} DISPLAY_DEVICEW, *PDISPLAY_DEVICEW, *LPDISPLAY_DEVICEW;
+
 typedef BOOL (CALLBACK *ABORTPROC)(HDC,int);
 typedef int (CALLBACK *MFENUMPROC)(HDC,HANDLETABLE*,METARECORD*,int,LPARAM);
 typedef int (CALLBACK *ENHMFENUMPROC)(HDC,HANDLETABLE*,ENHMETARECORD*,int,LPARAM);
@@ -2360,356 +2664,403 @@ typedef void (CALLBACK *LINEDDAPROC)(int,int,LPARAM);
 typedef UINT (CALLBACK *LPFNDEVMODE)(HWND,HMODULE,LPDEVMODEA,LPSTR,LPSTR,LPDEVMODEA,LPSTR,UINT);
 typedef DWORD (CALLBACK *LPFNDEVCAPS)(LPSTR,LPSTR,UINT,LPSTR,LPDEVMODEA);
 
-
-#define RGB(r,g,b)	((DWORD)(((BYTE)(r)|((WORD)(g)<<8))|(((DWORD)(BYTE)(b))<<16)))
 #define MAKEPOINTS(l) (*((POINTS*)&(l)))
 #define MAKEROP4(f,b)	(DWORD)((((b)<<8)&0xFF000000)|(f))
-#define PALETTEINDEX(i)	((0x01000000|(COLORREF)(WORD)(i)))
-#define PALETTERGB(r,g,b)	(0x02000000|RGB(r,g,b))
-int WINAPI AbortDoc(HDC);
-BOOL WINAPI AbortPath(HDC);
-int WINAPI AddFontResourceA(LPCSTR);
-int WINAPI AddFontResourceW(LPCWSTR);
-BOOL WINAPI AngleArc(HDC,int,int,DWORD,FLOAT,FLOAT);
-BOOL WINAPI AnimatePalette(HPALETTE,UINT,UINT,const PALETTEENTRY*);
-BOOL WINAPI Arc(HDC,int,int,int,int,int,int,int,int);
-BOOL WINAPI ArcTo(HDC,int,int,int,int,int,int,int,int);
-BOOL WINAPI BeginPath(HDC);
-BOOL WINAPI BitBlt(HDC,int,int,int,int,HDC,int,int,DWORD);
-BOOL WINAPI CancelDC(HDC);
-BOOL WINAPI CheckColorsInGamut(HDC,PVOID,PVOID,DWORD);
-BOOL WINAPI Chord(HDC,int,int,int,int,int,int,int,int);
-int WINAPI ChoosePixelFormat(HDC,CONST PIXELFORMATDESCRIPTOR*);
-HENHMETAFILE WINAPI CloseEnhMetaFile(HDC);
-BOOL WINAPI CloseFigure(HDC);
-HMETAFILE WINAPI CloseMetaFile(HDC);
-BOOL WINAPI ColorMatchToTarget(HDC,HDC,DWORD);
-int WINAPI CombineRgn(HRGN,HRGN,HRGN,int);
-BOOL WINAPI CombineTransform(LPXFORM,const XFORM*,const XFORM*);
-HENHMETAFILE WINAPI CopyEnhMetaFileA(HENHMETAFILE,LPCSTR);
-HENHMETAFILE WINAPI CopyEnhMetaFileW(HENHMETAFILE,LPCWSTR);
-HMETAFILE WINAPI CopyMetaFileA(HMETAFILE,LPCSTR);
-HMETAFILE WINAPI CopyMetaFileW(HMETAFILE,LPCWSTR);
-HBITMAP WINAPI CreateBitmap(int,int,UINT,UINT,PCVOID);
-HBITMAP WINAPI CreateBitmapIndirect(const BITMAP*);
-HBRUSH WINAPI CreateBrushIndirect(const LOGBRUSH*);
-HCOLORSPACE WINAPI CreateColorSpaceA(LPLOGCOLORSPACEA);
-HCOLORSPACE WINAPI CreateColorSpaceW(LPLOGCOLORSPACEW);
-HBITMAP WINAPI CreateCompatibleBitmap(HDC,int,int);
-HDC WINAPI CreateCompatibleDC(HDC);
-HDC WINAPI CreateDCA(LPCSTR,LPCSTR,LPCSTR,const DEVMODEA*);
-HDC WINAPI CreateDCW(LPCWSTR,LPCWSTR,LPCWSTR,const DEVMODEW*);
-HBITMAP WINAPI CreateDIBitmap(HDC,const BITMAPINFOHEADER*,DWORD,PCVOID,const BITMAPINFO*,UINT);
-HBRUSH WINAPI CreateDIBPatternBrush(HGLOBAL,UINT);
-HBRUSH WINAPI CreateDIBPatternBrushPt(PCVOID,UINT);
-HBITMAP WINAPI CreateDIBSection(HDC,const BITMAPINFO*,UINT,void**,HANDLE,DWORD);
-HBITMAP WINAPI CreateDiscardableBitmap(HDC,int,int);
-HRGN WINAPI CreateEllipticRgn(int,int,int,int);
-HRGN WINAPI CreateEllipticRgnIndirect(LPCRECT);
-HDC WINAPI CreateEnhMetaFileA(HDC,LPCSTR,LPCRECT,LPCSTR);
-HDC WINAPI CreateEnhMetaFileW(HDC,LPCWSTR,LPCRECT,LPCWSTR);
-HFONT WINAPI CreateFontA(int,int,int,int,int,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,LPCSTR);
-HFONT WINAPI CreateFontW(int,int,int,int,int,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,LPCWSTR);
-HFONT WINAPI CreateFontIndirectA(const LOGFONTA*);
-HFONT WINAPI CreateFontIndirectW(const LOGFONTW*);
-HPALETTE WINAPI CreateHalftonePalette(HDC);
-HBRUSH WINAPI CreateHatchBrush(int,COLORREF);
-HDC WINAPI CreateICA(LPCSTR,LPCSTR,LPCSTR,const DEVMODEA*);
-HDC WINAPI CreateICW(LPCWSTR,LPCWSTR,LPCWSTR,const DEVMODEW*);
-HDC WINAPI CreateMetaFileA(LPCSTR);
-HDC WINAPI CreateMetaFileW(LPCWSTR);
-HPALETTE WINAPI CreatePalette(const LOGPALETTE*);
-HBRUSH WINAPI CreatePatternBrush(HBITMAP);
-HPEN WINAPI CreatePen(int,int,COLORREF);
-HPEN WINAPI CreatePenIndirect(const LOGPEN*);
-HRGN WINAPI CreatePolygonRgn(const POINT*,int,int);
-HRGN WINAPI CreatePolyPolygonRgn(const POINT*,const INT*,int,int);
-HRGN WINAPI CreateRectRgn(int,int,int,int);
-HRGN WINAPI CreateRectRgnIndirect(LPCRECT);
-HRGN WINAPI CreateRoundRectRgn(int,int,int,int,int,int);
-BOOL WINAPI CreateScalableFontResourceA(DWORD,LPCSTR,LPCSTR,LPCSTR);
-BOOL WINAPI CreateScalableFontResourceW(DWORD,LPCWSTR,LPCWSTR,LPCWSTR);
-HBRUSH WINAPI CreateSolidBrush(COLORREF);
-BOOL WINAPI DeleteColorSpace(HCOLORSPACE);
-BOOL WINAPI DeleteDC(HDC);
-BOOL WINAPI DeleteEnhMetaFile(HENHMETAFILE);
-BOOL WINAPI DeleteMetaFile(HMETAFILE);
-BOOL WINAPI DeleteObject(HGDIOBJ);
-int WINAPI DescribePixelFormat(HDC,int,UINT,LPPIXELFORMATDESCRIPTOR);
-DWORD WINAPI DeviceCapabilitiesA(LPCSTR,LPCSTR,WORD,LPSTR,const DEVMODEA*);
-DWORD WINAPI DeviceCapabilitiesW(LPCWSTR,LPCWSTR,WORD,LPWSTR,const DEVMODEW*);
-BOOL WINAPI DPtoLP(HDC,LPPOINT,int);
-int WINAPI DrawEscape(HDC,int,int,LPCSTR);
-BOOL WINAPI Ellipse(HDC,int,int,int,int);
-int WINAPI EndDoc(HDC);
-int WINAPI EndPage(HDC);
-BOOL WINAPI EndPath(HDC);
-BOOL WINAPI EnumEnhMetaFile(HDC,HENHMETAFILE,ENHMFENUMPROC,PVOID,LPCRECT);
-int WINAPI EnumFontFamiliesA(HDC,LPCSTR,FONTENUMPROCA,LPARAM);
-int WINAPI EnumFontFamiliesW(HDC,LPCWSTR,FONTENUMPROCW,LPARAM);
-int WINAPI EnumFontFamiliesExA(HDC,PLOGFONTA,FONTENUMPROCA,LPARAM,DWORD);
-int WINAPI EnumFontFamiliesExW(HDC,PLOGFONTW,FONTENUMPROCW,LPARAM,DWORD);
-int WINAPI EnumFontsA(HDC,LPCSTR,FONTENUMPROCA,LPARAM);
-int WINAPI EnumFontsW(HDC,LPCWSTR,FONTENUMPROCA,LPARAM);
-int WINAPI EnumICMProfilesA(HDC,ICMENUMPROCA,LPARAM);
-int WINAPI EnumICMProfilesW(HDC,ICMENUMPROCW,LPARAM);
-BOOL WINAPI EnumMetaFile(HDC,HMETAFILE,MFENUMPROC,LPARAM);
-int WINAPI EnumObjects(HDC,int,GOBJENUMPROC,LPARAM);
-BOOL WINAPI EqualRgn(HRGN,HRGN);
-int WINAPI Escape(HDC,int,int,LPCSTR,PVOID);
-int WINAPI ExcludeClipRect(HDC,int,int,int,int);
-int WINAPI ExcludeUpdateRgn(HDC,HWND);
-HPEN WINAPI ExtCreatePen(DWORD,DWORD,const LOGBRUSH*,DWORD,const DWORD*);
-HRGN WINAPI ExtCreateRegion(const XFORM*,DWORD,const RGNDATA*);
-int WINAPI ExtEscape(HDC,int,int,LPCSTR,int,LPSTR);
-BOOL WINAPI ExtFloodFill(HDC,int,int,COLORREF,UINT);
-int WINAPI ExtSelectClipRgn(HDC,HRGN,int);
-BOOL WINAPI ExtTextOutA(HDC,int,int,UINT,LPCRECT,LPCSTR,UINT,const INT*);
-BOOL WINAPI ExtTextOutW(HDC,int,int,UINT,LPCRECT,LPCWSTR,UINT,const INT*);
-BOOL WINAPI FillPath(HDC);
-int WINAPI FillRect(HDC,LPCRECT,HBRUSH);
-int WINAPI FillRgn(HDC,HRGN,HBRUSH);
-BOOL WINAPI FixBrushOrgEx(HDC,int,int,LPPOINT);
-BOOL WINAPI FlattenPath(HDC);
-BOOL WINAPI FloodFill(HDC,int,int,COLORREF);
-BOOL WINAPI GdiComment(HDC,UINT,const BYTE*);
-BOOL WINAPI GdiFlush(void);
-DWORD WINAPI GdiGetBatchLimit(void);
-DWORD WINAPI GdiSetBatchLimit(DWORD);
+
 #define GetCValue(cmyk) ((BYTE)(cmyk))
 #define GetMValue(cmyk) ((BYTE)((cmyk)>> 8))
 #define GetYValue(cmyk) ((BYTE)((cmyk)>>16))
 #define GetKValue(cmyk) ((BYTE)((cmyk)>>24))
-#define CMYK(c,m,y,k) ((COLORREF)((((BYTE)(c)|((WORD)((BYTE)(m))<<8))|(((DWORD)(BYTE)(y))<<16))|(((DWORD)(BYTE)(k))<<24)))
+#define CMYK(c,m,y,k) ((COLORREF)((BYTE)(k)|((BYTE)(y)<<8)|((BYTE)(m)<<16)|((BYTE)(c)<<24)))
+
 #define GetRValue(c) ((BYTE)(c))
 #define GetGValue(c) ((BYTE)(((WORD)(c))>>8))
 #define GetBValue(c) ((BYTE)((c)>>16))
-int WINAPI GetArcDirection(HDC);
-BOOL WINAPI GetAspectRatioFilterEx(HDC,LPSIZE);
-LONG WINAPI GetBitmapBits(HBITMAP,LONG,PVOID);
-BOOL WINAPI GetBitmapDimensionEx(HBITMAP,LPSIZE);
-COLORREF WINAPI GetBkColor(HDC);
-int WINAPI GetBkMode(HDC);
-UINT WINAPI GetBoundsRect(HDC,LPRECT,UINT);
-BOOL WINAPI GetBrushOrgEx(HDC,LPPOINT);
-BOOL WINAPI GetCharABCWidthsA(HDC,UINT,UINT,LPABC);
-BOOL WINAPI GetCharABCWidthsW(HDC,UINT,UINT,LPABC);
-BOOL WINAPI GetCharABCWidthsFloatA(HDC,UINT,UINT,LPABCFLOAT);
-BOOL WINAPI GetCharABCWidthsFloatW(HDC,UINT,UINT,LPABCFLOAT);
-DWORD WINAPI GetCharacterPlacementA(HDC,LPCSTR,int,int,LPGCP_RESULTSA,DWORD);
-DWORD WINAPI GetCharacterPlacementW(HDC,LPCWSTR,int,int,LPGCP_RESULTSW,DWORD);
-BOOL WINAPI GetCharWidth32A(HDC,UINT,UINT,LPINT);
-BOOL WINAPI GetCharWidth32W(HDC,UINT,UINT,LPINT);
-BOOL WINAPI GetCharWidthA(HDC,UINT,UINT,LPINT);
-BOOL WINAPI GetCharWidthW(HDC,UINT,UINT,LPINT);
-BOOL WINAPI GetCharWidthFloatA(HDC,UINT,UINT,PFLOAT);
-BOOL WINAPI GetCharWidthFloatW(HDC,UINT,UINT,PFLOAT);
-int WINAPI GetClipBox(HDC,LPRECT);
-int WINAPI GetClipRgn(HDC,HRGN);
-BOOL WINAPI GetColorAdjustment(HDC,LPCOLORADJUSTMENT);
-HANDLE WINAPI GetColorSpace(HDC);
-HGDIOBJ WINAPI GetCurrentObject(HDC,UINT);
-BOOL WINAPI GetCurrentPositionEx(HDC,LPPOINT);
-HCURSOR WINAPI GetCursor(void);
-BOOL WINAPI GetDCOrgEx(HDC,LPPOINT);
-int WINAPI GetDeviceCaps(HDC,int);
-BOOL WINAPI GetDeviceGammaRamp(HDC,PVOID);
-UINT WINAPI GetDIBColorTable(HDC,UINT,UINT,RGBQUAD*);
-int WINAPI GetDIBits(HDC,HBITMAP,UINT,UINT,PVOID,LPBITMAPINFO,UINT);
-HENHMETAFILE WINAPI GetEnhMetaFileA(LPCSTR);
-HENHMETAFILE WINAPI GetEnhMetaFileW(LPCWSTR);
-UINT WINAPI GetEnhMetaFileDescriptionA(HENHMETAFILE,UINT,LPSTR);
-UINT WINAPI GetEnhMetaFileDescriptionW(HENHMETAFILE,UINT,LPWSTR);
-UINT WINAPI GetEnhMetaFileHeader(HENHMETAFILE,UINT,LPENHMETAHEADER);
-UINT WINAPI GetEnhMetaFilePaletteEntries(HENHMETAFILE,UINT,LPPALETTEENTRY);
-UINT WINAPI GetEnhMetaFilePixelFormat(HENHMETAFILE,DWORD,PIXELFORMATDESCRIPTOR*);
-DWORD WINAPI GetFontData(HDC,DWORD,DWORD,PVOID,DWORD);
-DWORD WINAPI GetFontLanguageInfo(HDC);
-DWORD WINAPI GetGlyphOutlineA(HDC,UINT,UINT,LPGLYPHMETRICS,DWORD,PVOID,const MAT2*);
-DWORD WINAPI GetGlyphOutlineW(HDC,UINT,UINT,LPGLYPHMETRICS,DWORD,PVOID,const MAT2*);
-int WINAPI GetGraphicsMode(HDC);
-BOOL WINAPI GetICMProfileA(HDC,DWORD,LPSTR);
-BOOL WINAPI GetICMProfileW(HDC,DWORD,LPWSTR);
-DWORD WINAPI GetKerningPairsA(HDC,DWORD,LPKERNINGPAIR);
-DWORD WINAPI GetKerningPairsW(HDC,DWORD,LPKERNINGPAIR);
-BOOL WINAPI GetLogColorSpaceA(HCOLORSPACE,LPLOGCOLORSPACEA,DWORD);
-BOOL WINAPI GetLogColorSpaceW(HCOLORSPACE,LPLOGCOLORSPACEW,DWORD);
-int WINAPI GetMapMode(HDC);
-HMETAFILE WINAPI GetMetaFileA(LPCSTR);
-HMETAFILE WINAPI GetMetaFileW(LPCWSTR);
-UINT WINAPI GetMetaFileBitsEx(HMETAFILE,UINT,PVOID);
-int WINAPI GetMetaRgn(HDC,HRGN);
-BOOL WINAPI GetMiterLimit(HDC,PFLOAT);
-COLORREF WINAPI GetNearestColor(HDC,COLORREF);
-UINT WINAPI GetNearestPaletteIndex(HPALETTE,COLORREF);
-int WINAPI GetObjectA(HGDIOBJ,int,PVOID);
-int WINAPI GetObjectW(HGDIOBJ,int,PVOID);
-DWORD WINAPI GetObjectType(HGDIOBJ);
-UINT WINAPI GetOutlineTextMetricsA(HDC,UINT,LPOUTLINETEXTMETRICA);
-UINT WINAPI GetOutlineTextMetricsW(HDC,UINT,LPOUTLINETEXTMETRICW);
-UINT WINAPI GetPaletteEntries(HPALETTE,UINT,UINT,LPPALETTEENTRY);
-int WINAPI GetPath(HDC,LPPOINT,PBYTE,int);
-COLORREF WINAPI GetPixel(HDC,int,int);
-int WINAPI GetPixelFormat(HDC);
-int WINAPI GetPolyFillMode(HDC);
-BOOL WINAPI GetRasterizerCaps(LPRASTERIZER_STATUS,UINT);
-int WINAPI GetRandomRgn (HDC,HRGN,INT);
-DWORD WINAPI GetRegionData(HRGN,DWORD,LPRGNDATA);
-int WINAPI GetRgnBox(HRGN,LPRECT);
-int WINAPI GetROP2(HDC);
-HGDIOBJ WINAPI GetStockObject(int);
-int WINAPI GetStretchBltMode(HDC);
-UINT WINAPI GetSystemPaletteEntries(HDC,UINT,UINT,LPPALETTEENTRY);
-UINT WINAPI GetSystemPaletteUse(HDC);
-UINT WINAPI GetTextAlign(HDC);
-int WINAPI GetTextCharacterExtra(HDC);
-int WINAPI GetTextCharset(HDC);
-int WINAPI GetTextCharsetInfo(HDC,LPFONTSIGNATURE,DWORD);
-COLORREF WINAPI GetTextColor(HDC);
-BOOL WINAPI GetTextExtentExPointA(HDC,LPCSTR,int,int,LPINT,LPINT,LPSIZE);
-BOOL WINAPI GetTextExtentExPointW( HDC,LPCWSTR,int,int,LPINT,LPINT,LPSIZE );
-BOOL WINAPI GetTextExtentPointA(HDC,LPCSTR,int,LPSIZE);
-BOOL WINAPI GetTextExtentPointW(HDC,LPCWSTR,int,LPSIZE);
-BOOL WINAPI GetTextExtentPoint32A(HDC,LPCSTR,int,LPSIZE);
-BOOL WINAPI GetTextExtentPoint32W( HDC,LPCWSTR,int,LPSIZE);
-int WINAPI GetTextFaceA(HDC,int,LPSTR);
-int WINAPI GetTextFaceW(HDC,int,LPWSTR);
-BOOL WINAPI GetTextMetricsA(HDC,LPTEXTMETRICA);
-BOOL WINAPI GetTextMetricsW(HDC,LPTEXTMETRICW);
-BOOL WINAPI GetViewportExtEx(HDC,LPSIZE);
-BOOL WINAPI GetViewportOrgEx(HDC,LPPOINT);
-BOOL WINAPI GetWindowExtEx(HDC,LPSIZE);
-BOOL WINAPI GetWindowOrgEx(HDC,LPPOINT);
-UINT WINAPI GetWinMetaFileBits(HENHMETAFILE,UINT,LPBYTE,INT,HDC);
-BOOL WINAPI GetWorldTransform(HDC,LPXFORM);
-int WINAPI IntersectClipRect(HDC,int,int,int,int);
-BOOL WINAPI InvertRgn(HDC,HRGN);
-BOOL WINAPI LineDDA(int,int,int,int,LINEDDAPROC,LPARAM);
-BOOL WINAPI LineTo(HDC,int,int);
-BOOL WINAPI LPtoDP(HDC,LPPOINT,int);
-BOOL WINAPI MaskBlt(HDC,int,int,int,int,HDC,int,int,HBITMAP,int,int,DWORD);
-BOOL WINAPI ModifyWorldTransform(HDC,const XFORM*,DWORD);
-BOOL WINAPI MoveToEx(HDC,int,int,LPPOINT);
-int WINAPI OffsetClipRgn(HDC,int,int);
-int WINAPI OffsetRgn(HRGN,int,int);
-BOOL WINAPI OffsetViewportOrgEx(HDC,int,int,LPPOINT);
-BOOL WINAPI OffsetWindowOrgEx(HDC,int,int,LPPOINT);
-BOOL WINAPI PaintRgn(HDC,HRGN);
-BOOL WINAPI PatBlt(HDC,int,int,int,int,DWORD);
-HRGN WINAPI PathToRegion(HDC);
-BOOL WINAPI Pie(HDC,int,int,int,int,int,int,int,int);
-BOOL WINAPI PlayEnhMetaFile(HDC,HENHMETAFILE,LPCRECT);
-BOOL WINAPI PlayEnhMetaFileRecord(HDC,LPHANDLETABLE,const ENHMETARECORD*,UINT);
-BOOL WINAPI PlayMetaFile(HDC,HMETAFILE);
-BOOL WINAPI PlayMetaFileRecord(HDC,LPHANDLETABLE,LPMETARECORD,UINT);
-BOOL WINAPI PlgBlt(HDC,const POINT*,HDC,int,int,int,int,HBITMAP,int,int);
-BOOL WINAPI PolyBezier(HDC,const POINT*,DWORD);
-BOOL WINAPI PolyBezierTo(HDC,const POINT*,DWORD);
-BOOL WINAPI PolyDraw(HDC,const POINT*,const BYTE*,int);
-BOOL WINAPI Polygon(HDC,const POINT*,int);
-BOOL WINAPI Polyline(HDC,const POINT*,int);
-BOOL WINAPI PolylineTo(HDC,const POINT*,DWORD);
-BOOL WINAPI PolyPolygon(HDC,const POINT*,const INT*,int);
-BOOL WINAPI PolyPolyline(HDC,const POINT*,const DWORD*,DWORD);
-BOOL WINAPI PolyTextOutA(HDC,const POLYTEXTA*,int);
-BOOL WINAPI PolyTextOutW(HDC,const POLYTEXTW*,int);
-BOOL WINAPI PtInRegion(HRGN,int,int);
-BOOL WINAPI PtVisible(HDC,int,int);
-UINT WINAPI RealizePalette(HDC);
-BOOL WINAPI Rectangle(HDC,int,int,int,int);
-BOOL WINAPI RectInRegion(HRGN,LPCRECT);
-BOOL WINAPI RectVisible(HDC,LPCRECT);
-BOOL WINAPI RemoveFontResourceA(LPCSTR);
-BOOL WINAPI RemoveFontResourceW(LPCWSTR);
-HDC WINAPI ResetDCA(HDC,const DEVMODEA*);
-HDC WINAPI ResetDCW(HDC,const DEVMODEW*);
-BOOL WINAPI ResizePalette(HPALETTE,UINT);
-BOOL WINAPI RestoreDC(HDC,int);
-BOOL WINAPI RoundRect(HDC,int,int,int,int,int,int);
-int WINAPI SaveDC(HDC);
-BOOL WINAPI ScaleViewportExtEx(HDC,int,int,int,int,LPSIZE);
-BOOL WINAPI ScaleWindowExtEx(HDC,int,int,int,int,LPSIZE);
-BOOL WINAPI SelectClipPath(HDC,int);
-int WINAPI SelectClipRgn(HDC,HRGN);
-HGDIOBJ WINAPI SelectObject(HDC,HGDIOBJ);
-HPALETTE WINAPI SelectPalette(HDC,HPALETTE,BOOL);
-int WINAPI SetAbortProc(HDC,ABORTPROC);
-int WINAPI SetArcDirection(HDC,int);
-LONG WINAPI SetBitmapBits(HBITMAP,DWORD,PCVOID);
-BOOL WINAPI SetBitmapDimensionEx(HBITMAP,int,int,LPSIZE);
-COLORREF WINAPI SetBkColor(HDC,COLORREF);
-int WINAPI SetBkMode(HDC,int);
-UINT WINAPI SetBoundsRect(HDC,LPCRECT,UINT);
-BOOL WINAPI SetBrushOrgEx(HDC,int,int,LPPOINT);
-BOOL WINAPI SetColorAdjustment(HDC,const COLORADJUSTMENT*);
-BOOL WINAPI SetColorSpace(HDC,HCOLORSPACE);
-BOOL WINAPI SetDeviceGammaRamp(HDC,PVOID);
-UINT WINAPI SetDIBColorTable(HDC,UINT,UINT,const RGBQUAD*);
-int WINAPI SetDIBits(HDC,HBITMAP,UINT,UINT,PCVOID,const BITMAPINFO*,UINT);
-int WINAPI SetDIBitsToDevice(HDC,int,int,DWORD,DWORD,int,int,UINT,UINT,PCVOID,const BITMAPINFO*,UINT);
-HENHMETAFILE WINAPI SetEnhMetaFileBits(UINT,const BYTE*);
-int WINAPI SetGraphicsMode(HDC,int);
-int WINAPI SetICMMode(HDC,int);
-BOOL WINAPI SetICMProfileA(HDC,LPSTR);
-BOOL WINAPI SetICMProfileW(HDC,LPWSTR);
-int WINAPI SetMapMode(HDC,int);
-DWORD WINAPI SetMapperFlags(HDC,DWORD);
-HMETAFILE WINAPI SetMetaFileBitsEx(UINT,const BYTE *);
-int WINAPI SetMetaRgn(HDC);
-BOOL WINAPI SetMiterLimit(HDC,FLOAT,PFLOAT);
-UINT WINAPI SetPaletteEntries(HPALETTE,UINT,UINT,const PALETTEENTRY*);
-COLORREF WINAPI SetPixel(HDC,int,int,COLORREF);
-BOOL WINAPI SetPixelFormat(HDC,int,const PIXELFORMATDESCRIPTOR*);
-BOOL WINAPI SetPixelV(HDC,int,int,COLORREF);
-int WINAPI SetPolyFillMode(HDC,int);
-BOOL WINAPI SetRectRgn(HRGN,int,int,int,int);
-int WINAPI SetROP2(HDC,int);
-int WINAPI SetStretchBltMode(HDC,int);
-UINT WINAPI SetSystemPaletteUse(HDC,UINT);
-UINT WINAPI SetTextAlign(HDC,UINT);
-int WINAPI SetTextCharacterExtra(HDC,int);
-COLORREF WINAPI SetTextColor(HDC,COLORREF);
-BOOL WINAPI SetTextJustification(HDC,int,int);
-BOOL WINAPI SetViewportExtEx(HDC,int,int,LPSIZE);
-BOOL WINAPI SetViewportOrgEx(HDC,int,int,LPPOINT);
-BOOL WINAPI SetWindowExtEx(HDC,int,int,LPSIZE);
-BOOL WINAPI SetWindowOrgEx(HDC,int,int,LPPOINT);
-HENHMETAFILE WINAPI SetWinMetaFileBits(UINT,const BYTE*,HDC,const METAFILEPICT*);
-BOOL WINAPI SetWorldTransform(HDC,const XFORM *);
-int WINAPI StartDocA(HDC,const DOCINFOA*);
-int WINAPI StartDocW(HDC,const DOCINFOW*);
-int WINAPI StartPage(HDC);
-BOOL WINAPI StretchBlt(HDC,int,int,int,int,HDC,int,int,int,int,DWORD);
-int WINAPI StretchDIBits(HDC,int,int,int,int,int,int,int,int,const VOID *,const BITMAPINFO *,UINT,DWORD);
-BOOL WINAPI StrokeAndFillPath(HDC);
-BOOL WINAPI StrokePath(HDC);
-BOOL WINAPI SwapBuffers(HDC);
-BOOL WINAPI TextOutA(HDC,int,int,LPCSTR,int);
-BOOL WINAPI TextOutW(HDC,int,int,LPCWSTR,int);
-BOOL WINAPI TranslateCharsetInfo(PDWORD,LPCHARSETINFO,DWORD);
-BOOL WINAPI UnrealizeObject(HGDIOBJ);
-BOOL WINAPI UpdateColors(HDC);
-BOOL WINAPI UpdateICMRegKeyA(DWORD,DWORD,LPSTR,UINT);
-BOOL WINAPI UpdateICMRegKeyW(DWORD,DWORD,LPWSTR,UINT);
-BOOL WINAPI WidenPath(HDC);
-BOOL WINAPI wglCopyContext(HGLRC,HGLRC,UINT);
-HGLRC WINAPI wglCreateContext(HDC);
-HGLRC WINAPI wglCreateLayerContext(HDC,int);
-BOOL WINAPI wglDeleteContext(HGLRC);
-BOOL WINAPI wglDescribeLayerPlane(HDC,int,int,UINT,LPLAYERPLANEDESCRIPTOR);
-HGLRC WINAPI wglGetCurrentContext(void);
-HDC WINAPI wglGetCurrentDC(void);
-int WINAPI wglGetLayerPaletteEntries(HDC,int,int,int,COLORREF*);
-PROC WINAPI wglGetProcAddress(LPCSTR);
-BOOL WINAPI wglMakeCurrent(HDC,HGLRC);
-BOOL WINAPI wglRealizeLayerPalette(HDC,int,BOOL);
-int WINAPI wglSetLayerPaletteEntries(HDC,int,int,int,const COLORREF*);
-BOOL WINAPI wglShareLists(HGLRC,HGLRC);
-BOOL WINAPI wglSwapLayerBuffers(HDC,UINT);
-BOOL WINAPI wglUseFontBitmapsA(HDC,DWORD,DWORD,DWORD);
-BOOL WINAPI wglUseFontBitmapsW(HDC,DWORD,DWORD,DWORD);
-BOOL WINAPI wglUseFontOutlinesA(HDC,DWORD,DWORD,DWORD,FLOAT,FLOAT,int,LPGLYPHMETRICSFLOAT);
-BOOL WINAPI wglUseFontOutlinesW(HDC,DWORD,DWORD,DWORD,FLOAT,FLOAT,int,LPGLYPHMETRICSFLOAT);
+#define RGB(r,g,b) ((COLORREF)((BYTE)(r)|((BYTE)(g) << 8)|((BYTE)(b) << 16)))
+
+#define PALETTEINDEX(i)	((0x01000000|(COLORREF)(WORD)(i)))
+#define PALETTERGB(r,g,b)	(0x02000000|RGB(r,g,b))
+
+WINGDIAPI int WINAPI AbortDoc(HDC);
+WINGDIAPI BOOL WINAPI AbortPath(HDC);
+WINGDIAPI int WINAPI AddFontResourceA(LPCSTR);
+WINGDIAPI int WINAPI AddFontResourceW(LPCWSTR);
+#if (_WIN32_WINNT >= 0x0500)
+WINGDIAPI HANDLE WINAPI AddFontMemResourceEx(PVOID,DWORD,PVOID,DWORD *);
+WINGDIAPI int WINAPI AddFontResourceExA(LPCSTR,DWORD,PVOID);
+WINGDIAPI int WINAPI AddFontResourceExW(LPCWSTR,DWORD,PVOID);
+#endif
+WINGDIAPI BOOL WINAPI AngleArc(HDC,int,int,DWORD,FLOAT,FLOAT);
+WINGDIAPI BOOL WINAPI AnimatePalette(HPALETTE,UINT,UINT,const PALETTEENTRY*);
+WINGDIAPI BOOL WINAPI Arc(HDC,int,int,int,int,int,int,int,int);
+WINGDIAPI BOOL WINAPI ArcTo(HDC,int,int,int,int,int,int,int,int);
+WINGDIAPI BOOL WINAPI BeginPath(HDC);
+WINGDIAPI BOOL WINAPI BitBlt(HDC,int,int,int,int,HDC,int,int,DWORD);
+WINGDIAPI BOOL WINAPI CancelDC(HDC);
+WINGDIAPI BOOL WINAPI CheckColorsInGamut(HDC,PVOID,PVOID,DWORD);
+WINGDIAPI BOOL WINAPI Chord(HDC,int,int,int,int,int,int,int,int);
+WINGDIAPI int WINAPI ChoosePixelFormat(HDC,CONST PIXELFORMATDESCRIPTOR*);
+WINGDIAPI HENHMETAFILE WINAPI CloseEnhMetaFile(HDC);
+WINGDIAPI BOOL WINAPI CloseFigure(HDC);
+WINGDIAPI HMETAFILE WINAPI CloseMetaFile(HDC);
+#if (_WIN32_WINDOWS >= 0x0410 || _WIN32_WINNT >= 0x0500)
+WINGDIAPI BOOL WINAPI ColorCorrectPalette(HDC,HPALETTE,DWORD,DWORD);
+WINGDIAPI BOOL WINAPI ColorMatchToTarget(HDC,HDC,DWORD);
+#endif
+WINGDIAPI int WINAPI CombineRgn(HRGN,HRGN,HRGN,int);
+WINGDIAPI BOOL WINAPI CombineTransform(LPXFORM,const XFORM*,const XFORM*);
+WINGDIAPI HENHMETAFILE WINAPI CopyEnhMetaFileA(HENHMETAFILE,LPCSTR);
+WINGDIAPI HENHMETAFILE WINAPI CopyEnhMetaFileW(HENHMETAFILE,LPCWSTR);
+WINGDIAPI HMETAFILE WINAPI CopyMetaFileA(HMETAFILE,LPCSTR);
+WINGDIAPI HMETAFILE WINAPI CopyMetaFileW(HMETAFILE,LPCWSTR);
+WINGDIAPI HBITMAP WINAPI CreateBitmap(int,int,UINT,UINT,PCVOID);
+WINGDIAPI HBITMAP WINAPI CreateBitmapIndirect(const BITMAP*);
+WINGDIAPI HBRUSH WINAPI CreateBrushIndirect(const LOGBRUSH*);
+WINGDIAPI HCOLORSPACE WINAPI CreateColorSpaceA(LPLOGCOLORSPACEA);
+WINGDIAPI HCOLORSPACE WINAPI CreateColorSpaceW(LPLOGCOLORSPACEW);
+WINGDIAPI HBITMAP WINAPI CreateCompatibleBitmap(HDC,int,int);
+WINGDIAPI HDC WINAPI CreateCompatibleDC(HDC);
+WINGDIAPI HDC WINAPI CreateDCA(LPCSTR,LPCSTR,LPCSTR,const DEVMODEA*);
+WINGDIAPI HDC WINAPI CreateDCW(LPCWSTR,LPCWSTR,LPCWSTR,const DEVMODEW*);
+WINGDIAPI HBITMAP WINAPI CreateDIBitmap(HDC,const BITMAPINFOHEADER*,DWORD,PCVOID,const BITMAPINFO*,UINT);
+WINGDIAPI HBRUSH WINAPI CreateDIBPatternBrush(HGLOBAL,UINT);
+WINGDIAPI HBRUSH WINAPI CreateDIBPatternBrushPt(PCVOID,UINT);
+WINGDIAPI HBITMAP WINAPI CreateDIBSection(HDC,const BITMAPINFO*,UINT,void**,HANDLE,DWORD);
+WINGDIAPI HBITMAP WINAPI CreateDiscardableBitmap(HDC,int,int);
+WINGDIAPI HRGN WINAPI CreateEllipticRgn(int,int,int,int);
+WINGDIAPI HRGN WINAPI CreateEllipticRgnIndirect(LPCRECT);
+WINGDIAPI HDC WINAPI CreateEnhMetaFileA(HDC,LPCSTR,LPCRECT,LPCSTR);
+WINGDIAPI HDC WINAPI CreateEnhMetaFileW(HDC,LPCWSTR,LPCRECT,LPCWSTR);
+WINGDIAPI HFONT WINAPI CreateFontA(int,int,int,int,int,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,LPCSTR);
+WINGDIAPI HFONT WINAPI CreateFontW(int,int,int,int,int,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,DWORD,LPCWSTR);
+WINGDIAPI HFONT WINAPI CreateFontIndirectA(const LOGFONTA*);
+WINGDIAPI HFONT WINAPI CreateFontIndirectW(const LOGFONTW*);
+WINGDIAPI HPALETTE WINAPI CreateHalftonePalette(HDC);
+WINGDIAPI HBRUSH WINAPI CreateHatchBrush(int,COLORREF);
+WINGDIAPI HDC WINAPI CreateICA(LPCSTR,LPCSTR,LPCSTR,const DEVMODEA*);
+WINGDIAPI HDC WINAPI CreateICW(LPCWSTR,LPCWSTR,LPCWSTR,const DEVMODEW*);
+WINGDIAPI HDC WINAPI CreateMetaFileA(LPCSTR);
+WINGDIAPI HDC WINAPI CreateMetaFileW(LPCWSTR);
+WINGDIAPI HPALETTE WINAPI CreatePalette(const LOGPALETTE*);
+WINGDIAPI HBRUSH WINAPI CreatePatternBrush(HBITMAP);
+WINGDIAPI HPEN WINAPI CreatePen(int,int,COLORREF);
+WINGDIAPI HPEN WINAPI CreatePenIndirect(const LOGPEN*);
+WINGDIAPI HRGN WINAPI CreatePolygonRgn(const POINT*,int,int);
+WINGDIAPI HRGN WINAPI CreatePolyPolygonRgn(const POINT*,const INT*,int,int);
+WINGDIAPI HRGN WINAPI CreateRectRgn(int,int,int,int);
+WINGDIAPI HRGN WINAPI CreateRectRgnIndirect(LPCRECT);
+WINGDIAPI HRGN WINAPI CreateRoundRectRgn(int,int,int,int,int,int);
+WINGDIAPI BOOL WINAPI CreateScalableFontResourceA(DWORD,LPCSTR,LPCSTR,LPCSTR);
+WINGDIAPI BOOL WINAPI CreateScalableFontResourceW(DWORD,LPCWSTR,LPCWSTR,LPCWSTR);
+WINGDIAPI HBRUSH WINAPI CreateSolidBrush(COLORREF);
+WINGDIAPI BOOL WINAPI DeleteColorSpace(HCOLORSPACE);
+WINGDIAPI BOOL WINAPI DeleteDC(HDC);
+WINGDIAPI BOOL WINAPI DeleteEnhMetaFile(HENHMETAFILE);
+WINGDIAPI BOOL WINAPI DeleteMetaFile(HMETAFILE);
+WINGDIAPI BOOL WINAPI DeleteObject(HGDIOBJ);
+WINGDIAPI int WINAPI DescribePixelFormat(HDC,int,UINT,LPPIXELFORMATDESCRIPTOR);
+WINGDIAPI DWORD WINAPI DeviceCapabilitiesA(LPCSTR,LPCSTR,WORD,LPSTR,const DEVMODEA*);
+WINGDIAPI DWORD WINAPI DeviceCapabilitiesW(LPCWSTR,LPCWSTR,WORD,LPWSTR,const DEVMODEW*);
+WINGDIAPI BOOL WINAPI DPtoLP(HDC,LPPOINT,int);
+WINGDIAPI int WINAPI DrawEscape(HDC,int,int,LPCSTR);
+WINGDIAPI BOOL WINAPI Ellipse(HDC,int,int,int,int);
+WINGDIAPI int WINAPI EndDoc(HDC);
+WINGDIAPI int WINAPI EndPage(HDC);
+WINGDIAPI BOOL WINAPI EndPath(HDC);
+WINGDIAPI BOOL WINAPI EnumEnhMetaFile(HDC,HENHMETAFILE,ENHMFENUMPROC,PVOID,LPCRECT);
+WINGDIAPI int WINAPI EnumFontFamiliesA(HDC,LPCSTR,FONTENUMPROCA,LPARAM);
+WINGDIAPI int WINAPI EnumFontFamiliesW(HDC,LPCWSTR,FONTENUMPROCW,LPARAM);
+WINGDIAPI int WINAPI EnumFontFamiliesExA(HDC,PLOGFONTA,FONTENUMPROCA,LPARAM,DWORD);
+WINGDIAPI int WINAPI EnumFontFamiliesExW(HDC,PLOGFONTW,FONTENUMPROCW,LPARAM,DWORD);
+WINGDIAPI int WINAPI EnumFontsA(HDC,LPCSTR,FONTENUMPROCA,LPARAM);
+WINGDIAPI int WINAPI EnumFontsW(HDC,LPCWSTR,FONTENUMPROCW,LPARAM);
+WINGDIAPI int WINAPI EnumICMProfilesA(HDC,ICMENUMPROCA,LPARAM);
+WINGDIAPI int WINAPI EnumICMProfilesW(HDC,ICMENUMPROCW,LPARAM);
+WINGDIAPI BOOL WINAPI EnumMetaFile(HDC,HMETAFILE,MFENUMPROC,LPARAM);
+WINGDIAPI int WINAPI EnumObjects(HDC,int,GOBJENUMPROC,LPARAM);
+WINGDIAPI BOOL WINAPI EqualRgn(HRGN,HRGN);
+WINGDIAPI int WINAPI Escape(HDC,int,int,LPCSTR,PVOID);
+WINGDIAPI int WINAPI ExcludeClipRect(HDC,int,int,int,int);
+WINGDIAPI int WINAPI ExcludeUpdateRgn(HDC,HWND);
+WINGDIAPI HPEN WINAPI ExtCreatePen(DWORD,DWORD,const LOGBRUSH*,DWORD,const DWORD*);
+WINGDIAPI HRGN WINAPI ExtCreateRegion(const XFORM*,DWORD,const RGNDATA*);
+WINGDIAPI int WINAPI ExtEscape(HDC,int,int,LPCSTR,int,LPSTR);
+WINGDIAPI BOOL WINAPI ExtFloodFill(HDC,int,int,COLORREF,UINT);
+WINGDIAPI int WINAPI ExtSelectClipRgn(HDC,HRGN,int);
+WINGDIAPI BOOL WINAPI ExtTextOutA(HDC,int,int,UINT,LPCRECT,LPCSTR,UINT,const INT*);
+WINGDIAPI BOOL WINAPI ExtTextOutW(HDC,int,int,UINT,LPCRECT,LPCWSTR,UINT,const INT*);
+WINGDIAPI BOOL WINAPI FillPath(HDC);
+WINGDIAPI int WINAPI FillRect(HDC,LPCRECT,HBRUSH);
+WINGDIAPI int WINAPI FillRgn(HDC,HRGN,HBRUSH);
+WINGDIAPI BOOL WINAPI FixBrushOrgEx(HDC,int,int,LPPOINT);
+WINGDIAPI BOOL WINAPI FlattenPath(HDC);
+WINGDIAPI BOOL WINAPI FloodFill(HDC,int,int,COLORREF);
+WINGDIAPI BOOL WINAPI GdiComment(HDC,UINT,const BYTE*);
+WINGDIAPI BOOL WINAPI GdiFlush(void);
+WINGDIAPI DWORD WINAPI GdiGetBatchLimit(void);
+WINGDIAPI DWORD WINAPI GdiSetBatchLimit(DWORD);
+WINGDIAPI int WINAPI GetArcDirection(HDC);
+WINGDIAPI BOOL WINAPI GetAspectRatioFilterEx(HDC,LPSIZE);
+WINGDIAPI LONG WINAPI GetBitmapBits(HBITMAP,LONG,PVOID);
+WINGDIAPI BOOL WINAPI GetBitmapDimensionEx(HBITMAP,LPSIZE);
+WINGDIAPI COLORREF WINAPI GetBkColor(HDC);
+WINGDIAPI int WINAPI GetBkMode(HDC);
+WINGDIAPI UINT WINAPI GetBoundsRect(HDC,LPRECT,UINT);
+WINGDIAPI BOOL WINAPI GetBrushOrgEx(HDC,LPPOINT);
+WINGDIAPI BOOL WINAPI GetCharABCWidthsA(HDC,UINT,UINT,LPABC);
+WINGDIAPI BOOL WINAPI GetCharABCWidthsW(HDC,UINT,UINT,LPABC);
+WINGDIAPI BOOL WINAPI GetCharABCWidthsFloatA(HDC,UINT,UINT,LPABCFLOAT);
+WINGDIAPI BOOL WINAPI GetCharABCWidthsFloatW(HDC,UINT,UINT,LPABCFLOAT);
+WINGDIAPI DWORD WINAPI GetCharacterPlacementA(HDC,LPCSTR,int,int,LPGCP_RESULTSA,DWORD);
+WINGDIAPI DWORD WINAPI GetCharacterPlacementW(HDC,LPCWSTR,int,int,LPGCP_RESULTSW,DWORD);
+WINGDIAPI BOOL WINAPI GetCharWidth32A(HDC,UINT,UINT,LPINT);
+WINGDIAPI BOOL WINAPI GetCharWidth32W(HDC,UINT,UINT,LPINT);
+WINGDIAPI BOOL WINAPI GetCharWidthA(HDC,UINT,UINT,LPINT);
+WINGDIAPI BOOL WINAPI GetCharWidthW(HDC,UINT,UINT,LPINT);
+WINGDIAPI BOOL WINAPI GetCharWidthFloatA(HDC,UINT,UINT,PFLOAT);
+WINGDIAPI BOOL WINAPI GetCharWidthFloatW(HDC,UINT,UINT,PFLOAT);
+WINGDIAPI int WINAPI GetClipBox(HDC,LPRECT);
+WINGDIAPI int WINAPI GetClipRgn(HDC,HRGN);
+WINGDIAPI BOOL WINAPI GetColorAdjustment(HDC,LPCOLORADJUSTMENT);
+WINGDIAPI HANDLE WINAPI GetColorSpace(HDC);
+WINGDIAPI HGDIOBJ WINAPI GetCurrentObject(HDC,UINT);
+WINGDIAPI BOOL WINAPI GetCurrentPositionEx(HDC,LPPOINT);
+WINGDIAPI HCURSOR WINAPI GetCursor(void);
+#if (WINVER >= 0x0500)
+WINGDIAPI COLORREF WINAPI GetDCBrushColor(HDC);
+WINGDIAPI COLORREF WINAPI GetDCPenColor(HDC);
+#endif
+WINGDIAPI BOOL WINAPI GetDCOrgEx(HDC,LPPOINT);
+WINGDIAPI int WINAPI GetDeviceCaps(HDC,int);
+WINGDIAPI BOOL WINAPI GetDeviceGammaRamp(HDC,PVOID);
+WINGDIAPI UINT WINAPI GetDIBColorTable(HDC,UINT,UINT,RGBQUAD*);
+WINGDIAPI int WINAPI GetDIBits(HDC,HBITMAP,UINT,UINT,PVOID,LPBITMAPINFO,UINT);
+WINGDIAPI HENHMETAFILE WINAPI GetEnhMetaFileA(LPCSTR);
+WINGDIAPI HENHMETAFILE WINAPI GetEnhMetaFileW(LPCWSTR);
+WINGDIAPI UINT WINAPI GetEnhMetaFileBits(HENHMETAFILE,UINT,LPBYTE);
+WINGDIAPI UINT WINAPI GetEnhMetaFileDescriptionA(HENHMETAFILE,UINT,LPSTR);
+WINGDIAPI UINT WINAPI GetEnhMetaFileDescriptionW(HENHMETAFILE,UINT,LPWSTR);
+WINGDIAPI UINT WINAPI GetEnhMetaFileHeader(HENHMETAFILE,UINT,LPENHMETAHEADER);
+WINGDIAPI UINT WINAPI GetEnhMetaFilePaletteEntries(HENHMETAFILE,UINT,LPPALETTEENTRY);
+WINGDIAPI UINT WINAPI GetEnhMetaFilePixelFormat(HENHMETAFILE,DWORD,CONST PIXELFORMATDESCRIPTOR*);
+WINGDIAPI DWORD WINAPI GetFontData(HDC,DWORD,DWORD,PVOID,DWORD);
+WINGDIAPI DWORD WINAPI GetFontLanguageInfo(HDC);
+WINGDIAPI DWORD WINAPI GetGlyphOutlineA(HDC,UINT,UINT,LPGLYPHMETRICS,DWORD,PVOID,const MAT2*);
+WINGDIAPI DWORD WINAPI GetGlyphOutlineW(HDC,UINT,UINT,LPGLYPHMETRICS,DWORD,PVOID,const MAT2*);
+WINGDIAPI int WINAPI GetGraphicsMode(HDC);
+WINGDIAPI BOOL WINAPI GetICMProfileA(HDC,LPDWORD,LPSTR);
+WINGDIAPI BOOL WINAPI GetICMProfileW(HDC,LPDWORD,LPWSTR);
+WINGDIAPI DWORD WINAPI GetKerningPairsA(HDC,DWORD,LPKERNINGPAIR);
+WINGDIAPI DWORD WINAPI GetKerningPairsW(HDC,DWORD,LPKERNINGPAIR);
+WINGDIAPI BOOL WINAPI GetLogColorSpaceA(HCOLORSPACE,LPLOGCOLORSPACEA,DWORD);
+WINGDIAPI BOOL WINAPI GetLogColorSpaceW(HCOLORSPACE,LPLOGCOLORSPACEW,DWORD);
+WINGDIAPI int WINAPI GetMapMode(HDC);
+WINGDIAPI HMETAFILE WINAPI GetMetaFileA(LPCSTR);
+WINGDIAPI HMETAFILE WINAPI GetMetaFileW(LPCWSTR);
+WINGDIAPI UINT WINAPI GetMetaFileBitsEx(HMETAFILE,UINT,PVOID);
+WINGDIAPI int WINAPI GetMetaRgn(HDC,HRGN);
+WINGDIAPI BOOL WINAPI GetMiterLimit(HDC,PFLOAT);
+WINGDIAPI COLORREF WINAPI GetNearestColor(HDC,COLORREF);
+WINGDIAPI UINT WINAPI GetNearestPaletteIndex(HPALETTE,COLORREF);
+WINGDIAPI int WINAPI GetObjectA(HGDIOBJ,int,PVOID);
+WINGDIAPI int WINAPI GetObjectW(HGDIOBJ,int,PVOID);
+WINGDIAPI DWORD WINAPI GetObjectType(HGDIOBJ);
+WINGDIAPI UINT WINAPI GetOutlineTextMetricsA(HDC,UINT,LPOUTLINETEXTMETRICA);
+WINGDIAPI UINT WINAPI GetOutlineTextMetricsW(HDC,UINT,LPOUTLINETEXTMETRICW);
+WINGDIAPI UINT WINAPI GetPaletteEntries(HPALETTE,UINT,UINT,LPPALETTEENTRY);
+WINGDIAPI int WINAPI GetPath(HDC,LPPOINT,PBYTE,int);
+WINGDIAPI COLORREF WINAPI GetPixel(HDC,int,int);
+WINGDIAPI int WINAPI GetPixelFormat(HDC);
+WINGDIAPI int WINAPI GetPolyFillMode(HDC);
+WINGDIAPI BOOL WINAPI GetRasterizerCaps(LPRASTERIZER_STATUS,UINT);
+WINGDIAPI int WINAPI GetRandomRgn (HDC,HRGN,INT);
+WINGDIAPI DWORD WINAPI GetRegionData(HRGN,DWORD,LPRGNDATA);
+WINGDIAPI int WINAPI GetRgnBox(HRGN,LPRECT);
+WINGDIAPI int WINAPI GetROP2(HDC);
+WINGDIAPI HGDIOBJ WINAPI GetStockObject(int);
+WINGDIAPI int WINAPI GetStretchBltMode(HDC);
+WINGDIAPI UINT WINAPI GetSystemPaletteEntries(HDC,UINT,UINT,LPPALETTEENTRY);
+WINGDIAPI UINT WINAPI GetSystemPaletteUse(HDC);
+WINGDIAPI UINT WINAPI GetTextAlign(HDC);
+WINGDIAPI int WINAPI GetTextCharacterExtra(HDC);
+WINGDIAPI int WINAPI GetTextCharset(HDC);
+WINGDIAPI int WINAPI GetTextCharsetInfo(HDC,LPFONTSIGNATURE,DWORD);
+WINGDIAPI COLORREF WINAPI GetTextColor(HDC);
+WINGDIAPI BOOL WINAPI GetTextExtentExPointA(HDC,LPCSTR,int,int,LPINT,LPINT,LPSIZE);
+WINGDIAPI BOOL WINAPI GetTextExtentExPointW( HDC,LPCWSTR,int,int,LPINT,LPINT,LPSIZE );
+WINGDIAPI BOOL WINAPI GetTextExtentPointA(HDC,LPCSTR,int,LPSIZE);
+WINGDIAPI BOOL WINAPI GetTextExtentPointW(HDC,LPCWSTR,int,LPSIZE);
+#if (_WIN32_WINNT >= 0x0500)
+WINGDIAPI BOOL WINAPI GetTextExtentExPointI(HDC, LPWORD, int, int, LPINT, LPINT, LPSIZE);
+#endif
+#ifdef _WIN32_WCE
+extern BOOL GetTextExtentPoint32A(HDC,LPCSTR,int,LPSIZE);
+extern BOOL GetTextExtentPoint32W( HDC,LPCWSTR,int,LPSIZE);
+#else
+WINGDIAPI BOOL WINAPI GetTextExtentPoint32A(HDC,LPCSTR,int,LPSIZE);
+WINGDIAPI BOOL WINAPI GetTextExtentPoint32W( HDC,LPCWSTR,int,LPSIZE);
+#endif
+WINGDIAPI int WINAPI GetTextFaceA(HDC,int,LPSTR);
+WINGDIAPI int WINAPI GetTextFaceW(HDC,int,LPWSTR);
+WINGDIAPI BOOL WINAPI GetTextMetricsA(HDC,LPTEXTMETRICA);
+WINGDIAPI BOOL WINAPI GetTextMetricsW(HDC,LPTEXTMETRICW);
+WINGDIAPI BOOL WINAPI GetViewportExtEx(HDC,LPSIZE);
+WINGDIAPI BOOL WINAPI GetViewportOrgEx(HDC,LPPOINT);
+WINGDIAPI BOOL WINAPI GetWindowExtEx(HDC,LPSIZE);
+WINGDIAPI BOOL WINAPI GetWindowOrgEx(HDC,LPPOINT);
+WINGDIAPI UINT WINAPI GetWinMetaFileBits(HENHMETAFILE,UINT,LPBYTE,INT,HDC);
+WINGDIAPI BOOL WINAPI GetWorldTransform(HDC,LPXFORM);
+WINGDIAPI int WINAPI IntersectClipRect(HDC,int,int,int,int);
+WINGDIAPI BOOL WINAPI InvertRgn(HDC,HRGN);
+WINGDIAPI BOOL WINAPI LineDDA(int,int,int,int,LINEDDAPROC,LPARAM);
+WINGDIAPI BOOL WINAPI LineTo(HDC,int,int);
+WINGDIAPI BOOL WINAPI LPtoDP(HDC,LPPOINT,int);
+WINGDIAPI BOOL WINAPI MaskBlt(HDC,int,int,int,int,HDC,int,int,HBITMAP,int,int,DWORD);
+WINGDIAPI BOOL WINAPI ModifyWorldTransform(HDC,const XFORM*,DWORD);
+WINGDIAPI BOOL WINAPI MoveToEx(HDC,int,int,LPPOINT);
+WINGDIAPI int WINAPI OffsetClipRgn(HDC,int,int);
+WINGDIAPI int WINAPI OffsetRgn(HRGN,int,int);
+WINGDIAPI BOOL WINAPI OffsetViewportOrgEx(HDC,int,int,LPPOINT);
+WINGDIAPI BOOL WINAPI OffsetWindowOrgEx(HDC,int,int,LPPOINT);
+WINGDIAPI BOOL WINAPI PaintRgn(HDC,HRGN);
+WINGDIAPI BOOL WINAPI PatBlt(HDC,int,int,int,int,DWORD);
+WINGDIAPI HRGN WINAPI PathToRegion(HDC);
+WINGDIAPI BOOL WINAPI Pie(HDC,int,int,int,int,int,int,int,int);
+WINGDIAPI BOOL WINAPI PlayEnhMetaFile(HDC,HENHMETAFILE,LPCRECT);
+WINGDIAPI BOOL WINAPI PlayEnhMetaFileRecord(HDC,LPHANDLETABLE,const ENHMETARECORD*,UINT);
+WINGDIAPI BOOL WINAPI PlayMetaFile(HDC,HMETAFILE);
+WINGDIAPI BOOL WINAPI PlayMetaFileRecord(HDC,LPHANDLETABLE,LPMETARECORD,UINT);
+WINGDIAPI BOOL WINAPI PlgBlt(HDC,const POINT*,HDC,int,int,int,int,HBITMAP,int,int);
+WINGDIAPI BOOL WINAPI PolyBezier(HDC,const POINT*,DWORD);
+WINGDIAPI BOOL WINAPI PolyBezierTo(HDC,const POINT*,DWORD);
+WINGDIAPI BOOL WINAPI PolyDraw(HDC,const POINT*,const BYTE*,int);
+WINGDIAPI BOOL WINAPI Polygon(HDC,const POINT*,int);
+WINGDIAPI BOOL WINAPI Polyline(HDC,const POINT*,int);
+WINGDIAPI BOOL WINAPI PolylineTo(HDC,const POINT*,DWORD);
+WINGDIAPI BOOL WINAPI PolyPolygon(HDC,const POINT*,const INT*,int);
+WINGDIAPI BOOL WINAPI PolyPolyline(HDC,const POINT*,const DWORD*,DWORD);
+WINGDIAPI BOOL WINAPI PolyTextOutA(HDC,const POLYTEXTA*,int);
+WINGDIAPI BOOL WINAPI PolyTextOutW(HDC,const POLYTEXTW*,int);
+WINGDIAPI BOOL WINAPI PtInRegion(HRGN,int,int);
+WINGDIAPI BOOL WINAPI PtVisible(HDC,int,int);
+WINGDIAPI UINT WINAPI RealizePalette(HDC);
+WINGDIAPI BOOL WINAPI Rectangle(HDC,int,int,int,int);
+WINGDIAPI BOOL WINAPI RectInRegion(HRGN,LPCRECT);
+WINGDIAPI BOOL WINAPI RectVisible(HDC,LPCRECT);
+WINGDIAPI BOOL WINAPI RemoveFontResourceA(LPCSTR);
+WINGDIAPI BOOL WINAPI RemoveFontResourceW(LPCWSTR);
+#if (_WIN32_WINNT >= 0x0500)
+WINGDIAPI BOOL WINAPI RemoveFontMemResourceEx(HANDLE);
+WINGDIAPI BOOL WINAPI RemoveFontResourceExA(LPCSTR,DWORD,PVOID);
+WINGDIAPI BOOL WINAPI RemoveFontResourceExW(LPCWSTR,DWORD,PVOID);
+#endif
+WINGDIAPI HDC WINAPI ResetDCA(HDC,const DEVMODEA*);
+WINGDIAPI HDC WINAPI ResetDCW(HDC,const DEVMODEW*);
+WINGDIAPI BOOL WINAPI ResizePalette(HPALETTE,UINT);
+WINGDIAPI BOOL WINAPI RestoreDC(HDC,int);
+WINGDIAPI BOOL WINAPI RoundRect(HDC,int,int,int,int,int,int);
+WINGDIAPI int WINAPI SaveDC(HDC);
+WINGDIAPI BOOL WINAPI ScaleViewportExtEx(HDC,int,int,int,int,LPSIZE);
+WINGDIAPI BOOL WINAPI ScaleWindowExtEx(HDC,int,int,int,int,LPSIZE);
+WINGDIAPI BOOL WINAPI SelectClipPath(HDC,int);
+WINGDIAPI int WINAPI SelectClipRgn(HDC,HRGN);
+WINGDIAPI HGDIOBJ WINAPI SelectObject(HDC,HGDIOBJ);
+WINGDIAPI HPALETTE WINAPI SelectPalette(HDC,HPALETTE,BOOL);
+WINGDIAPI int WINAPI SetAbortProc(HDC,ABORTPROC);
+WINGDIAPI int WINAPI SetArcDirection(HDC,int);
+WINGDIAPI LONG WINAPI SetBitmapBits(HBITMAP,DWORD,PCVOID);
+WINGDIAPI BOOL WINAPI SetBitmapDimensionEx(HBITMAP,int,int,LPSIZE);
+WINGDIAPI COLORREF WINAPI SetBkColor(HDC,COLORREF);
+WINGDIAPI int WINAPI SetBkMode(HDC,int);
+WINGDIAPI UINT WINAPI SetBoundsRect(HDC,LPCRECT,UINT);
+WINGDIAPI BOOL WINAPI SetBrushOrgEx(HDC,int,int,LPPOINT);
+WINGDIAPI BOOL WINAPI SetColorAdjustment(HDC,const COLORADJUSTMENT*);
+WINGDIAPI BOOL WINAPI SetColorSpace(HDC,HCOLORSPACE);
+#if (_WIN32_WINNT >= 0x0500)
+WINGDIAPI COLORREF WINAPI SetDCBrushColor(HDC,COLORREF);
+WINGDIAPI COLORREF WINAPI SetDCPenColor(HDC,COLORREF);
+#endif
+WINGDIAPI BOOL WINAPI SetDeviceGammaRamp(HDC,PVOID);
+WINGDIAPI UINT WINAPI SetDIBColorTable(HDC,UINT,UINT,const RGBQUAD*);
+WINGDIAPI int WINAPI SetDIBits(HDC,HBITMAP,UINT,UINT,PCVOID,const BITMAPINFO*,UINT);
+WINGDIAPI int WINAPI SetDIBitsToDevice(HDC,int,int,DWORD,DWORD,int,int,UINT,UINT,PCVOID,const BITMAPINFO*,UINT);
+WINGDIAPI HENHMETAFILE WINAPI SetEnhMetaFileBits(UINT,const BYTE*);
+WINGDIAPI int WINAPI SetGraphicsMode(HDC,int);
+WINGDIAPI int WINAPI SetICMMode(HDC,int);
+WINGDIAPI BOOL WINAPI SetICMProfileA(HDC,LPSTR);
+WINGDIAPI BOOL WINAPI SetICMProfileW(HDC,LPWSTR);
+WINGDIAPI int WINAPI SetMapMode(HDC,int);
+WINGDIAPI DWORD WINAPI SetMapperFlags(HDC,DWORD);
+WINGDIAPI HMETAFILE WINAPI SetMetaFileBitsEx(UINT,const BYTE *);
+WINGDIAPI int WINAPI SetMetaRgn(HDC);
+WINGDIAPI BOOL WINAPI SetMiterLimit(HDC,FLOAT,PFLOAT);
+WINGDIAPI UINT WINAPI SetPaletteEntries(HPALETTE,UINT,UINT,const PALETTEENTRY*);
+WINGDIAPI COLORREF WINAPI SetPixel(HDC,int,int,COLORREF);
+WINGDIAPI BOOL WINAPI SetPixelFormat(HDC,int,const PIXELFORMATDESCRIPTOR*);
+WINGDIAPI BOOL WINAPI SetPixelV(HDC,int,int,COLORREF);
+WINGDIAPI int WINAPI SetPolyFillMode(HDC,int);
+WINGDIAPI BOOL WINAPI SetRectRgn(HRGN,int,int,int,int);
+WINGDIAPI int WINAPI SetROP2(HDC,int);
+WINGDIAPI int WINAPI SetStretchBltMode(HDC,int);
+WINGDIAPI UINT WINAPI SetSystemPaletteUse(HDC,UINT);
+WINGDIAPI UINT WINAPI SetTextAlign(HDC,UINT);
+WINGDIAPI int WINAPI SetTextCharacterExtra(HDC,int);
+WINGDIAPI COLORREF WINAPI SetTextColor(HDC,COLORREF);
+WINGDIAPI BOOL WINAPI SetTextJustification(HDC,int,int);
+WINGDIAPI BOOL WINAPI SetViewportExtEx(HDC,int,int,LPSIZE);
+WINGDIAPI BOOL WINAPI SetViewportOrgEx(HDC,int,int,LPPOINT);
+WINGDIAPI BOOL WINAPI SetWindowExtEx(HDC,int,int,LPSIZE);
+WINGDIAPI BOOL WINAPI SetWindowOrgEx(HDC,int,int,LPPOINT);
+WINGDIAPI HENHMETAFILE WINAPI SetWinMetaFileBits(UINT,const BYTE*,HDC,const METAFILEPICT*);
+WINGDIAPI BOOL WINAPI SetWorldTransform(HDC,const XFORM *);
+WINGDIAPI int WINAPI StartDocA(HDC,const DOCINFOA*);
+WINGDIAPI int WINAPI StartDocW(HDC,const DOCINFOW*);
+WINGDIAPI int WINAPI StartPage(HDC);
+WINGDIAPI BOOL WINAPI StretchBlt(HDC,int,int,int,int,HDC,int,int,int,int,DWORD);
+WINGDIAPI int WINAPI StretchDIBits(HDC,int,int,int,int,int,int,int,int,const VOID *,const BITMAPINFO *,UINT,DWORD);
+WINGDIAPI BOOL WINAPI StrokeAndFillPath(HDC);
+WINGDIAPI BOOL WINAPI StrokePath(HDC);
+WINGDIAPI BOOL WINAPI SwapBuffers(HDC);
+WINGDIAPI BOOL WINAPI TextOutA(HDC,int,int,LPCSTR,int);
+WINGDIAPI BOOL WINAPI TextOutW(HDC,int,int,LPCWSTR,int);
+WINGDIAPI BOOL WINAPI TranslateCharsetInfo(PDWORD,LPCHARSETINFO,DWORD);
+WINGDIAPI BOOL WINAPI UnrealizeObject(HGDIOBJ);
+WINGDIAPI BOOL WINAPI UpdateColors(HDC);
+WINGDIAPI BOOL WINAPI UpdateICMRegKeyA(DWORD,DWORD,LPSTR,UINT);
+WINGDIAPI BOOL WINAPI UpdateICMRegKeyW(DWORD,DWORD,LPWSTR,UINT);
+WINGDIAPI BOOL WINAPI WidenPath(HDC);
+WINGDIAPI BOOL WINAPI wglCopyContext(HGLRC,HGLRC,UINT);
+WINGDIAPI HGLRC WINAPI wglCreateContext(HDC);
+WINGDIAPI HGLRC WINAPI wglCreateLayerContext(HDC,int);
+WINGDIAPI BOOL WINAPI wglDeleteContext(HGLRC);
+WINGDIAPI BOOL WINAPI wglDescribeLayerPlane(HDC,int,int,UINT,LPLAYERPLANEDESCRIPTOR);
+WINGDIAPI HGLRC WINAPI wglGetCurrentContext(void);
+WINGDIAPI HDC WINAPI wglGetCurrentDC(void);
+WINGDIAPI int WINAPI wglGetLayerPaletteEntries(HDC,int,int,int,COLORREF*);
+WINGDIAPI PROC WINAPI wglGetProcAddress(LPCSTR);
+WINGDIAPI BOOL WINAPI wglMakeCurrent(HDC,HGLRC);
+WINGDIAPI BOOL WINAPI wglRealizeLayerPalette(HDC,int,BOOL);
+WINGDIAPI int WINAPI wglSetLayerPaletteEntries(HDC,int,int,int,const COLORREF*);
+WINGDIAPI BOOL WINAPI wglShareLists(HGLRC,HGLRC);
+WINGDIAPI BOOL WINAPI wglSwapLayerBuffers(HDC,UINT);
+WINGDIAPI BOOL WINAPI wglUseFontBitmapsA(HDC,DWORD,DWORD,DWORD);
+WINGDIAPI BOOL WINAPI wglUseFontBitmapsW(HDC,DWORD,DWORD,DWORD);
+WINGDIAPI BOOL WINAPI wglUseFontOutlinesA(HDC,DWORD,DWORD,DWORD,FLOAT,FLOAT,int,LPGLYPHMETRICSFLOAT);
+WINGDIAPI BOOL WINAPI wglUseFontOutlinesW(HDC,DWORD,DWORD,DWORD,FLOAT,FLOAT,int,LPGLYPHMETRICSFLOAT);
+#if (WINVER >= 0x0410)
+WINGDIAPI BOOL WINAPI AlphaBlend(HDC,int,int,int,int,HDC,int,int,int,int,BLENDFUNCTION);
+WINGDIAPI BOOL WINAPI GradientFill(HDC,PTRIVERTEX,ULONG,PVOID,ULONG,ULONG);
+WINGDIAPI BOOL WINAPI TransparentBlt(HDC,int,int,int,int,HDC,int,int,int,int,UINT);
+#endif
+#if (_WIN32_WINNT >= 0x0500)
+WINGDIAPI DWORD WINAPI GetFontUnicodeRanges(HDC,LPGLYPHSET);
+WINGDIAPI DWORD WINAPI GetGlyphIndicesA(HDC,LPCSTR,int,LPWORD,DWORD);
+WINGDIAPI DWORD WINAPI GetGlyphIndicesW(HDC,LPCWSTR,int,LPWORD,DWORD);
+#endif
+#if (WINVER >= 0x0500)
+WINGDIAPI DWORD WINAPI GetLayout(HDC);
+WINGDIAPI DWORD WINAPI SetLayout(HDC, DWORD);
+#endif
 
 #ifdef UNICODE
 typedef WCHAR BCHAR;
@@ -2719,18 +3070,28 @@ typedef TEXTMETRICW TEXTMETRIC,*PTEXTMETRIC,*LPTEXTMETRIC;
 #define ICMENUMPROC ICMENUMPROCW
 #define FONTENUMPROC FONTENUMPROCW
 typedef DEVMODEW DEVMODE,*PDEVMODE,*LPDEVMODE;
+#if _WIN32_WINNT >= 0x0500
+typedef ENUMLOGFONTEXDVW ENUMLOGFONTEXDV;
+typedef PENUMLOGFONTEXDVW PENUMLOGFONTEXDV;
+typedef LPENUMLOGFONTEXDVW LPENUMLOGFONTEXDV;
+#endif
 typedef EXTLOGFONTW EXTLOGFONT,*PEXTLOGFONT,*LPEXTLOGFONT;
 typedef GCP_RESULTSW GCP_RESULTS,*LPGCP_RESULTS;
 typedef OUTLINETEXTMETRICW OUTLINETEXTMETRIC,*POUTLINETEXTMETRIC,*LPOUTLINETEXTMETRIC;
-typedef POLYTEXTW POLYTEXT;
+typedef POLYTEXTW POLYTEXT,*PPOLYTEXT,*LPPOLYTEXT;
 typedef LOGCOLORSPACEW LOGCOLORSPACE,*LPLOGCOLORSPACE;
 typedef NEWTEXTMETRICW NEWTEXTMETRIC,*PNEWTEXTMETRIC,*LPNEWTEXTMETRIC;
 typedef NEWTEXTMETRICEXW NEWTEXTMETRICEX;
 typedef ENUMLOGFONTW ENUMLOGFONT,*LPENUMLOGFONT;
 typedef ENUMLOGFONTEXW ENUMLOGFONTEX,*LPENUMLOGFONTEX;
+typedef DISPLAY_DEVICEW DISPLAY_DEVICE, *PDISPLAY_DEVICE, *LPDISPLAY_DEVICE;
 #define AddFontResource AddFontResourceW
+#if (_WIN32_WINNT >= 0x0500)
+#define AddFontResourceEx AddFontResourceExW
+#endif
 #define CopyEnhMetaFile CopyEnhMetaFileW
 #define CopyMetaFile CopyMetaFileW
+#define CreateColorSpace CreateColorSpaceW
 #define CreateDC CreateDCW
 #define CreateEnhMetaFile CreateEnhMetaFileW
 #define CreateFont CreateFontW
@@ -2766,6 +3127,9 @@ typedef ENUMLOGFONTEXW ENUMLOGFONTEX,*LPENUMLOGFONTEX;
 #define GetTextMetrics GetTextMetricsW
 #define PolyTextOut PolyTextOutW
 #define RemoveFontResource RemoveFontResourceW
+#if (_WIN32_WINNT >= 0x0500)
+#define RemoveFontResourceEx RemoveFontResourceExW
+#endif
 #define ResetDC ResetDCW
 #define SetICMProfile SetICMProfileW
 #define StartDoc StartDocW
@@ -2773,7 +3137,10 @@ typedef ENUMLOGFONTEXW ENUMLOGFONTEX,*LPENUMLOGFONTEX;
 #define UpdateICMRegKey UpdateICMRegKeyW
 #define wglUseFontBitmaps wglUseFontBitmapsW
 #define wglUseFontOutlines wglUseFontOutlinesW
-#else
+#if (_WIN32_WINNT >= 0x0500)
+#define GetGlyphIndices  GetGlyphIndicesW
+#endif
+#else  /* UNICODE */
 typedef BYTE BCHAR;
 typedef DOCINFOA DOCINFO, *LPDOCINFO;
 typedef LOGFONTA LOGFONT,*PLOGFONT,*LPLOGFONT;
@@ -2781,18 +3148,28 @@ typedef TEXTMETRICA TEXTMETRIC,*PTEXTMETRIC,*LPTEXTMETRIC;
 #define ICMENUMPROC ICMENUMPROCA
 #define FONTENUMPROC FONTENUMPROCA
 typedef DEVMODEA DEVMODE,*PDEVMODE,*LPDEVMODE;
+#if _WIN32_WINNT >= 0x0500
+typedef ENUMLOGFONTEXDVA ENUMLOGFONTEXDV;
+typedef PENUMLOGFONTEXDVA PENUMLOGFONTEXDV;
+typedef LPENUMLOGFONTEXDVA LPENUMLOGFONTEXDV;
+#endif
 typedef EXTLOGFONTA EXTLOGFONT,*PEXTLOGFONT,*LPEXTLOGFONT;
 typedef GCP_RESULTSA GCP_RESULTS,*LPGCP_RESULTS;
 typedef OUTLINETEXTMETRICA OUTLINETEXTMETRIC,*POUTLINETEXTMETRIC,*LPOUTLINETEXTMETRIC;
-typedef POLYTEXTA POLYTEXT;
+typedef POLYTEXTA POLYTEXT,*PPOLYTEXT,*LPPOLYTEXT;
 typedef LOGCOLORSPACEA LOGCOLORSPACE,*LPLOGCOLORSPACE;
 typedef NEWTEXTMETRICA NEWTEXTMETRIC,*PNEWTEXTMETRIC,*LPNEWTEXTMETRIC;
 typedef NEWTEXTMETRICEXA NEWTEXTMETRICEX;
 typedef ENUMLOGFONTA ENUMLOGFONT,*LPENUMLOGFONT;
 typedef ENUMLOGFONTEXA ENUMLOGFONTEX,*LPENUMLOGFONTEX;
+typedef DISPLAY_DEVICEA DISPLAY_DEVICE, *PDISPLAY_DEVICE, *LPDISPLAY_DEVICE;
 #define AddFontResource AddFontResourceA
+#if (_WIN32_WINNT >= 0x0500)
+#define AddFontResourceEx AddFontResourceExA
+#endif
 #define CopyEnhMetaFile CopyEnhMetaFileA
 #define CopyMetaFile CopyMetaFileA
+#define CreateColorSpace CreateColorSpaceA
 #define CreateDC CreateDCA
 #define CreateEnhMetaFile CreateEnhMetaFileA
 #define CreateFont CreateFontA
@@ -2828,6 +3205,9 @@ typedef ENUMLOGFONTEXA ENUMLOGFONTEX,*LPENUMLOGFONTEX;
 #define GetTextMetrics GetTextMetricsA
 #define PolyTextOut PolyTextOutA
 #define RemoveFontResource RemoveFontResourceA
+#if (_WIN32_WINNT >= 0x0500)
+#define RemoveFontResourceEx RemoveFontResourceExA
+#endif
 #define ResetDC ResetDCA
 #define SetICMProfile SetICMProfileA
 #define StartDoc StartDocA
@@ -2835,8 +3215,11 @@ typedef ENUMLOGFONTEXA ENUMLOGFONTEX,*LPENUMLOGFONTEX;
 #define UpdateICMRegKey UpdateICMRegKeyA
 #define wglUseFontBitmaps wglUseFontBitmapsA
 #define wglUseFontOutlines wglUseFontOutlinesA
+#if (_WIN32_WINNT >= 0x0500)
+#define GetGlyphIndices  GetGlyphIndicesA
 #endif
-#endif
+#endif /* UNICODE */
+#endif /* RC_INVOKED */
 #ifdef __cplusplus
 }
 #endif

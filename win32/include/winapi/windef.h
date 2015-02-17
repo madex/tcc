@@ -10,9 +10,20 @@ extern "C" {
 
 #ifndef WINVER
 #define WINVER 0x0400
+/*
+ * If you need Win32 API features newer the Win95 and WinNT then you must
+ * define WINVER before including windows.h or any other method of including
+ * the windef.h header.
+ */
 #endif
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT WINVER
+/*
+ * There may be the need to define _WIN32_WINNT to a value different from
+ * the value of WINVER.  I don't have any example of why you would do that.
+ * However, if you must then define _WIN32_WINNT to the value required before
+ * including windows.h or any other method of including the windef.h header.
+ */
 #endif
 #ifndef WIN32
 #define WIN32
@@ -43,14 +54,27 @@ extern "C" {
 #ifndef TRUE
 #define TRUE 1
 #endif
+
+/* Pseudo modifiers for parameters 
+   We don't use these unnecessary defines in the w32api headers. Define
+   them by default since that is what people expect, but allow users
+   to avoid the pollution.  */
+#ifndef _NO_W32_PSEUDO_MODIFIERS
 #define IN
 #define OUT
 #ifndef OPTIONAL
 #define OPTIONAL
 #endif
+#endif
 
 #ifdef __GNUC__
 #define PACKED __attribute__((packed))
+#ifndef _fastcall
+#define _fastcall __attribute__((fastcall))
+#endif
+#ifndef __fastcall
+#define __fastcall __attribute__((fastcall))
+#endif
 #ifndef _stdcall
 #define _stdcall __attribute__((stdcall))
 #endif
@@ -69,6 +93,8 @@ extern "C" {
 #ifndef _declspec
 #define _declspec(e) __attribute__((e))
 #endif
+#elif defined(__WATCOMC__)
+#define PACKED
 #else
 #define PACKED
 #define _cdecl
@@ -84,6 +110,7 @@ extern "C" {
 #define PASCAL _pascal
 #define CDECL _cdecl
 #define STDCALL __stdcall
+#define FASTCALL __fastcall
 #define WINAPI __stdcall
 #define WINAPIV __cdecl
 #define APIENTRY __stdcall
@@ -106,11 +133,13 @@ extern "C" {
 #define LOBYTE(w)	((BYTE)(w))
 #define HIBYTE(w)	((BYTE)(((WORD)(w)>>8)&0xFF))
 
+#ifndef __WATCOMC__
 #ifndef _export
 #define _export
 #endif
 #ifndef __export
 #define __export
+#endif
 #endif
 
 #ifndef NOMINMAX
@@ -126,6 +155,76 @@ extern "C" {
 #define UNREFERENCED_LOCAL_VARIABLE(L) {(L)=(L);}
 #define DBG_UNREFERENCED_PARAMETER(P)
 #define DBG_UNREFERENCED_LOCAL_VARIABLE(L)
+
+#ifndef NONAMELESSUNION
+#ifdef __GNUC__
+#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95) 
+#define _ANONYMOUS_UNION __extension__
+#define _ANONYMOUS_STRUCT __extension__
+#else
+#if defined(__cplusplus)
+#define _ANONYMOUS_UNION __extension__
+#endif /* __cplusplus */
+#endif /* __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 95) */
+#elif defined(__WATCOMC__)
+#define _ANONYMOUS_UNION
+#define _ANONYMOUS_STRUCT
+#endif /* __GNUC__/__WATCOMC__ */
+#endif /* NONAMELESSUNION */
+
+#ifndef _ANONYMOUS_UNION
+#define _ANONYMOUS_UNION
+#define _UNION_NAME(x) x
+#define DUMMYUNIONNAME	u
+#define DUMMYUNIONNAME2	u2
+#define DUMMYUNIONNAME3	u3
+#define DUMMYUNIONNAME4	u4
+#define DUMMYUNIONNAME5	u5
+#define DUMMYUNIONNAME6	u6
+#define DUMMYUNIONNAME7	u7
+#define DUMMYUNIONNAME8	u8
+#else
+#define _UNION_NAME(x)
+#define DUMMYUNIONNAME
+#define DUMMYUNIONNAME2
+#define DUMMYUNIONNAME3
+#define DUMMYUNIONNAME4
+#define DUMMYUNIONNAME5
+#define DUMMYUNIONNAME6
+#define DUMMYUNIONNAME7
+#define DUMMYUNIONNAME8
+#endif
+#ifndef _ANONYMOUS_STRUCT
+#define _ANONYMOUS_STRUCT
+#define _STRUCT_NAME(x) x
+#define DUMMYSTRUCTNAME	s
+#define DUMMYSTRUCTNAME2 s2
+#define DUMMYSTRUCTNAME3 s3
+#else
+#define _STRUCT_NAME(x)
+#define DUMMYSTRUCTNAME
+#define DUMMYSTRUCTNAME2
+#define DUMMYSTRUCTNAME3
+#endif
+
+#ifndef NO_STRICT
+#ifndef STRICT
+#define STRICT 1
+#endif
+#endif
+
+/* FIXME: This will make some code compile. The programs will most
+   likely crash when an exception is raised, but at least they will
+   compile. */
+#if defined (__GNUC__) && defined (__SEH_NOOP)
+#define __try
+#define __except(x) if (0) /* don't execute handler */
+#define __finally
+
+#define _try __try
+#define _except __except
+#define _finally __finally
+#endif
 
 typedef unsigned long DWORD;
 typedef int WINBOOL,*PWINBOOL,*LPWINBOOL;
@@ -147,16 +246,15 @@ typedef int *PINT,*LPINT;
 typedef WORD *PWORD,*LPWORD;
 typedef long *LPLONG;
 typedef DWORD *PDWORD,*LPDWORD;
-typedef void *PVOID,*LPVOID;
 typedef CONST void *PCVOID,*LPCVOID;
 typedef int INT;
 typedef unsigned int UINT,*PUINT,*LPUINT;
 
 #include <winnt.h>
 
-typedef UINT WPARAM;
-typedef LONG LPARAM;
-typedef LONG LRESULT;
+typedef UINT_PTR WPARAM;
+typedef LONG_PTR LPARAM;
+typedef LONG_PTR LRESULT;
 #ifndef _HRESULT_DEFINED
 typedef LONG HRESULT;
 #define _HRESULT_DEFINED
@@ -181,12 +279,11 @@ DECLARE_HANDLE(HFONT);
 DECLARE_HANDLE(HICON);
 DECLARE_HANDLE(HKEY);
 /* FIXME: How to handle these. SM_CMONITORS etc in winuser.h also. */
-/* #if (WINVER >= 0x0500) */
 DECLARE_HANDLE(HMONITOR);
 #define HMONITOR_DECLARED 1
 DECLARE_HANDLE(HTERMINAL);
 DECLARE_HANDLE(HWINEVENTHOOK);
-/* #endif */
+
 typedef HKEY *PHKEY;
 DECLARE_HANDLE(HMENU);
 DECLARE_HANDLE(HMETAFILE);
