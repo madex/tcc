@@ -1,8 +1,6 @@
 /* ---------------------------------------------- */
 /* alloca86.S */
 
-#include "../config.h"
-
 .globl alloca
 
 alloca:
@@ -30,4 +28,8 @@ p3:
     push    %edx
     ret
 
+/* mark stack as nonexecutable */
+#if defined __ELF__ && defined __linux__
+    .section    .note.GNU-stack,"",@progbits
+#endif
 /* ---------------------------------------------- */

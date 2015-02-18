@@ -318,7 +318,12 @@ typedef struct
 #define SHT_REL          9              /* Relocation entries, no addends */
 #define SHT_SHLIB        10             /* Reserved */
 #define SHT_DYNSYM       11             /* Dynamic linker symbol table */
-#define SHT_NUM          12             /* Number of defined types.  */
+#define SHT_INIT_ARRAY   14             /* Array of constructors */
+#define SHT_FINI_ARRAY   15             /* Array of destructors */
+#define SHT_PREINIT_ARRAY 16            /* Array of pre-constructors */
+#define SHT_GROUP        17             /* Section group */
+#define SHT_SYMTAB_SHNDX 18             /* Extended section indices */
+#define SHT_NUM          19             /* Number of defined types.  */
 #define SHT_LOOS         0x60000000     /* Start OS-specific */
 #define SHT_LOSUNW       0x6ffffffb     /* Sun-specific low bound.  */
 #define SHT_SUNW_COMDAT  0x6ffffffb
@@ -342,6 +347,17 @@ typedef struct
 #define SHF_ALLOC       (1 << 1)        /* Occupies memory during execution */
 #define SHF_EXECINSTR   (1 << 2)        /* Executable */
 #define SHF_MASKPROC    0xf0000000      /* Processor-specific */
+
+#define SHF_MERGE       0x10
+#define SHF_STRINGS     0x20
+#define SHF_INFO_LINK   0x40
+#define SHF_LINK_ORDER  0x80
+#define SHF_OS_NONCONFORMING 0x100
+#define SHF_GROUP       0x200
+#define SHF_TLS         0x400
+#define SHF_MASKOS      0x0ff00000
+#define SHF_ORDERED     0x40000000
+#define SHF_EXCLUDE     0x80000000
 
 /* Symbol table entry.  */
 
@@ -431,6 +447,7 @@ typedef struct
 #define STT_SECTION     3               /* Symbol associated with a section */
 #define STT_FILE        4               /* Symbol's name is file name */
 #define STT_NUM         5               /* Number of defined types.  */
+#define STT_GNU_IFUNC   10              /* Symbol is a indirect code object */
 #define STT_LOOS        11              /* Start of OS-specific */
 #define STT_HIOS        12              /* End of OS-specific */
 #define STT_LOPROC      13              /* Start of processor-specific */
@@ -948,6 +965,10 @@ typedef struct
 #define R_386_GOTPC     10              /* 32 bit PC relative offset to GOT */
 /* Keep this the last entry.  */
 #define R_386_NUM       11
+
+/* TCC-specific 16-bit relocs. */
+#define R_386_16        12              /* Direct 16 bit  */
+#define R_386_PC16      13              /* PC relative 16 bit */
 
 /* SUN SPARC specific definitions.  */
 
@@ -1652,7 +1673,7 @@ typedef Elf32_Addr Elf32_Conflict;
 #define R_ARM_THM_ABS5          7
 #define R_ARM_ABS8              8       /* Direct 8 bit */
 #define R_ARM_SBREL32           9
-#define R_ARM_THM_PC22          10
+#define R_ARM_THM_CALL          10
 #define R_ARM_THM_PC8           11
 #define R_ARM_AMP_VCALL9        12
 #define R_ARM_SWI24             13
@@ -1669,7 +1690,13 @@ typedef Elf32_Addr Elf32_Conflict;
 #define R_ARM_PLT32             27      /* 32 bit PLT address */
 #define R_ARM_CALL              28
 #define R_ARM_JUMP24            29
+#define R_ARM_THM_JUMP24        30
+#define R_ARM_V4BX              40
 #define R_ARM_PREL31            42
+#define R_ARM_MOVW_ABS_NC       43
+#define R_ARM_MOVT_ABS          44
+#define R_ARM_THM_MOVW_ABS_NC   47
+#define R_ARM_THM_MOVT_ABS      48
 #define R_ARM_GNU_VTENTRY       100
 #define R_ARM_GNU_VTINHERIT     101
 #define R_ARM_THM_PC11          102     /* thumb unconditional branch */
@@ -1700,15 +1727,5 @@ typedef Elf32_Addr Elf32_Conflict;
 
 #define R_C60HI16      0x55       // high 16 bit MVKH embedded
 #define R_C60LO16      0x54       // low 16 bit MVKL embedded
-
-#ifdef TCC_TARGET_X86_64
-#define TCC_ELFCLASS ELFCLASS64
-#define ElfW(type) Elf##64##_##type
-#define ELFW(type) ELF##64##_##type
-#else
-#define TCC_ELFCLASS ELFCLASS32
-#define ElfW(type) Elf##32##_##type
-#define ELFW(type) ELF##32##_##type
-#endif
 
 #endif  /* elf.h */

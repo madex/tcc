@@ -18,8 +18,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifdef TARGET_DEFS_ONLY
+
 /* number of available registers */
-#define NB_REGS             4
+#define NB_REGS         4
+#define NB_ASM_REGS     8
 
 /* a register can belong to several classes. The classes must be
    sorted from more general to more precise (see gv2() code which does
@@ -40,13 +43,6 @@ enum {
     TREG_ECX,
     TREG_EDX,
     TREG_ST0,
-};
-
-int reg_classes[NB_REGS] = {
-    /* eax */ RC_INT | RC_EAX,
-    /* ecx */ RC_INT | RC_ECX,
-    /* edx */ RC_INT | RC_EDX,
-    /* st0 */ RC_FLOAT | RC_ST0,
 };
 
 /* return registers for function */
@@ -70,6 +66,9 @@ int reg_classes[NB_REGS] = {
 /* maximum alignment (for aligned attribute support) */
 #define MAX_ALIGN     8
 
+
+#define psym oad
+
 /******************************************************/
 /* ELF defines */
 
@@ -77,6 +76,7 @@ int reg_classes[NB_REGS] = {
 
 /* relocation type for 32 bit data relocation */
 #define R_DATA_32   R_386_32
+#define R_DATA_PTR  R_386_32
 #define R_JMP_SLOT  R_386_JMP_SLOT
 #define R_COPY      R_386_COPY
 
@@ -84,13 +84,25 @@ int reg_classes[NB_REGS] = {
 #define ELF_PAGE_SIZE  0x1000
 
 /******************************************************/
+#else /* ! TARGET_DEFS_ONLY */
+/******************************************************/
+#include "tcc.h"
+
+ST_DATA const int reg_classes[NB_REGS] = {
+    /* eax */ RC_INT | RC_EAX,
+    /* ecx */ RC_INT | RC_ECX,
+    /* edx */ RC_INT | RC_EDX,
+    /* st0 */ RC_FLOAT | RC_ST0,
+};
 
 static unsigned long func_sub_sp_offset;
-static unsigned long func_bound_offset;
 static int func_ret_sub;
+#ifdef CONFIG_TCC_BCHECK
+static unsigned long func_bound_offset;
+#endif
 
 /* XXX: make it faster ? */
-void g(int c)
+ST_FUNC void g(int c)
 {
     int ind1;
     ind1 = ind + 1;
@@ -100,7 +112,7 @@ void g(int c)
     ind = ind1;
 }
 
-void o(unsigned int c)
+ST_FUNC void o(unsigned int c)
 {
     while (c) {
         g(c);
@@ -108,7 +120,13 @@ void o(unsigned int c)
     }
 }
 
-void gen_le32(int c)
+ST_FUNC void gen_le16(int v)
+{
+    g(v);
+    g(v >> 8);
+}
+
+ST_FUNC void gen_le32(int c)
 {
     g(c);
     g(c >> 8);
@@ -117,7 +135,7 @@ void gen_le32(int c)
 }
 
 /* output a symbol and patch all calls to it */
-void gsym_addr(int t, int a)
+ST_FUNC void gsym_addr(int t, int a)
 {
     int n, *ptr;
     while (t) {
@@ -128,7 +146,7 @@ void gsym_addr(int t, int a)
     }
 }
 
-void gsym(int t)
+ST_FUNC void gsym(int t)
 {
     gsym_addr(t, ind);
 }
@@ -138,7 +156,7 @@ void gsym(int t)
 #define psym oad
 
 /* instruction + 4 bytes data. Return the address of the data */
-static int oad(int c, int s)
+ST_FUNC int oad(int c, int s)
 {
     int ind1;
 
@@ -153,11 +171,18 @@ static int oad(int c, int s)
 }
 
 /* output constant with relocation if 'r & VT_SYM' is true */
-static void gen_addr32(int r, Sym *sym, int c)
+ST_FUNC void gen_addr32(int r, Sym *sym, int c)
 {
     if (r & VT_SYM)
         greloc(cur_text_section, sym, ind, R_386_32);
     gen_le32(c);
+}
+
+ST_FUNC void gen_addrpc32(int r, Sym *sym, int c)
+{
+    if (r & VT_SYM)
+        greloc(cur_text_section, sym, ind, R_386_PC32);
+    gen_le32(c - 4);
 }
 
 /* generate a modrm reference. 'op_reg' contains the addtionnal 3
@@ -183,12 +208,16 @@ static void gen_modrm(int op_reg, int r, Sym *sym, int c)
     }
 }
 
-
 /* load 'r' from value 'sv' */
-void load(int r, SValue *sv)
+ST_FUNC void load(int r, SValue *sv)
 {
     int v, t, ft, fc, fr;
     SValue v1;
+
+#ifdef TCC_TARGET_PE
+    SValue v2;
+    sv = pe_getimport(sv, &v2);
+#endif
 
     fr = sv->r;
     ft = sv->type.t;
@@ -200,8 +229,10 @@ void load(int r, SValue *sv)
             v1.type.t = VT_INT;
             v1.r = VT_LOCAL | VT_LVAL;
             v1.c.ul = fc;
-            load(r, &v1);
             fr = r;
+            if (!(reg_classes[fr] & RC_INT))
+                fr = get_reg(RC_INT);
+            load(fr, &v1);
         }
         if ((ft & VT_BTYPE) == VT_FLOAT) {
             o(0xd9); /* flds */
@@ -229,8 +260,13 @@ void load(int r, SValue *sv)
             o(0xb8 + r); /* mov $xx, r */
             gen_addr32(fr, sv->sym, fc);
         } else if (v == VT_LOCAL) {
-            o(0x8d); /* lea xxx(%ebp), r */
-            gen_modrm(r, VT_LOCAL, sv->sym, fc);
+            if (fc) {
+                o(0x8d); /* lea xxx(%ebp), r */
+                gen_modrm(r, VT_LOCAL, sv->sym, fc);
+            } else {
+                o(0x89);
+                o(0xe8 + r); /* mov %ebp, r */
+            }
         } else if (v == VT_CMP) {
             oad(0xb8 + r, 0); /* mov $0, r */
             o(0x0f); /* setxx %br */
@@ -250,9 +286,14 @@ void load(int r, SValue *sv)
 }
 
 /* store register 'r' in lvalue 'v' */
-void store(int r, SValue *v)
+ST_FUNC void store(int r, SValue *v)
 {
     int fr, bt, ft, fc;
+
+#ifdef TCC_TARGET_PE
+    SValue v2;
+    v = pe_getimport(v, &v2);
+#endif
 
     ft = v->type.t;
     fc = v->c.ul;
@@ -326,7 +367,7 @@ static uint8_t fastcallw_regs[2] = { TREG_ECX, TREG_EDX };
 /* Generate function call. The function address is pushed first, then
    all the parameters in call order. This functions pops all the
    parameters and the function address. */
-void gfunc_call(int nb_args)
+ST_FUNC void gfunc_call(int nb_args)
 {
     int size, align, r, args_size, i, func_call;
     Sym *func_sym;
@@ -402,6 +443,11 @@ void gfunc_call(int nb_args)
         }
     }
     gcall_or_jmp(0);
+
+#ifdef TCC_TARGET_PE
+    if ((func_sym->type.t & VT_BTYPE) == VT_STRUCT)
+        args_size -= 4;
+#endif
     if (args_size && func_call != FUNC_STDCALL)
         gadd_sp(args_size);
     vtop--;
@@ -414,7 +460,7 @@ void gfunc_call(int nb_args)
 #endif
 
 /* generate function prolog of type 't' */
-void gfunc_prolog(CType *func_type)
+ST_FUNC void gfunc_prolog(CType *func_type)
 {
     int addr, align, size, func_call, fastcall_nb_regs;
     int param_index, param_addr;
@@ -426,6 +472,8 @@ void gfunc_prolog(CType *func_type)
     func_call = FUNC_CALL(sym->r);
     addr = 8;
     loc = 0;
+    func_vc = 0;
+
     if (func_call >= FUNC_FASTCALL1 && func_call <= FUNC_FASTCALL3) {
         fastcall_nb_regs = func_call - FUNC_FASTCALL1 + 1;
         fastcall_regs_ptr = fastcall_regs;
@@ -478,17 +526,23 @@ void gfunc_prolog(CType *func_type)
     /* pascal type call ? */
     if (func_call == FUNC_STDCALL)
         func_ret_sub = addr - 8;
+#ifdef TCC_TARGET_PE
+    else if (func_vc)
+        func_ret_sub = 4;
+#endif
 
+#ifdef CONFIG_TCC_BCHECK
     /* leave some room for bound checking code */
     if (tcc_state->do_bounds_check) {
         oad(0xb8, 0); /* lbound section pointer */
         oad(0xb8, 0); /* call to function */
         func_bound_offset = lbounds_section->data_offset;
     }
+#endif
 }
 
 /* generate function epilog */
-void gfunc_epilog(void)
+ST_FUNC void gfunc_epilog(void)
 {
     int v, saved_ind;
 
@@ -559,13 +613,13 @@ void gfunc_epilog(void)
 }
 
 /* generate a jump to a label */
-int gjmp(int t)
+ST_FUNC int gjmp(int t)
 {
     return psym(0xe9, t);
 }
 
 /* generate a jump to a fixed address */
-void gjmp_addr(int a)
+ST_FUNC void gjmp_addr(int a)
 {
     int r;
     r = a - ind - 2;
@@ -578,7 +632,7 @@ void gjmp_addr(int a)
 }
 
 /* generate a test. set 'inv' to invert test. Stack entry is popped */
-int gtst(int inv, int t)
+ST_FUNC int gtst(int inv, int t)
 {
     int v, *p;
 
@@ -623,7 +677,7 @@ int gtst(int inv, int t)
 }
 
 /* generate an integer binary operation */
-void gen_opi(int op)
+ST_FUNC void gen_opi(int op)
 {
     int r, fr, opc, c;
 
@@ -639,10 +693,16 @@ void gen_opi(int op)
             vswap();
             c = vtop->c.i;
             if (c == (char)c) {
-                /* XXX: generate inc and dec for smaller code ? */
-                o(0x83);
-                o(0xc0 | (opc << 3) | r);
-                g(c);
+                /* generate inc and dec for smaller code */
+                if (c==1 && opc==0) {
+                    o (0x40 | r); // inc
+                } else if (c==1 && opc==5) {
+                    o (0x48 | r); // dec
+                } else {
+                    o(0x83);
+                    o(0xc0 | (opc << 3) | r);
+                    g(c);
+                }
             } else {
                 o(0x81);
                 oad(0xc0 | (opc << 3) | r, c);
@@ -757,7 +817,7 @@ void gen_opi(int op)
 /* generate a floating point operation 'v = t1 op t2' instruction. The
    two operands are guaranted to have the same floating point type */
 /* XXX: need to use ST1 too */
-void gen_opf(int op)
+ST_FUNC void gen_opf(int op)
 {
     int a, ft, fc, swapped, r;
 
@@ -869,7 +929,7 @@ void gen_opf(int op)
 
 /* convert integers to fp 't' type. Must handle 'int', 'unsigned int'
    and 'long long' cases. */
-void gen_cvt_itof(int t)
+ST_FUNC void gen_cvt_itof(int t)
 {
     save_reg(TREG_ST0);
     gv(RC_INT);
@@ -899,13 +959,14 @@ void gen_cvt_itof(int t)
 
 /* convert fp to int 't' type */
 /* XXX: handle long long case */
-void gen_cvt_ftoi(int t)
+ST_FUNC void gen_cvt_ftoi(int t)
 {
     int r, r2, size;
     Sym *sym;
     CType ushort_type;
 
     ushort_type.t = VT_SHORT | VT_UNSIGNED;
+    ushort_type.ref = 0;
 
     gv(RC_FLOAT);
     if (t != VT_INT)
@@ -949,14 +1010,14 @@ void gen_cvt_ftoi(int t)
 }
 
 /* convert from one floating point type to another */
-void gen_cvt_ftof(int t)
+ST_FUNC void gen_cvt_ftof(int t)
 {
     /* all we have to do on i386 is to put the float in a register */
     gv(RC_FLOAT);
 }
 
 /* computed goto support */
-void ggoto(void)
+ST_FUNC void ggoto(void)
 {
     gcall_or_jmp(1);
     vtop--;
@@ -966,7 +1027,7 @@ void ggoto(void)
 #ifdef CONFIG_TCC_BCHECK
 
 /* generate a bounded pointer addition */
-void gen_bounded_ptr_add(void)
+ST_FUNC void gen_bounded_ptr_add(void)
 {
     Sym *sym;
 
@@ -989,7 +1050,7 @@ void gen_bounded_ptr_add(void)
 
 /* patch pointer addition in vtop so that pointer dereferencing is
    also tested */
-void gen_bounded_ptr_deref(void)
+ST_FUNC void gen_bounded_ptr_deref(void)
 {
     int func;
     int size, align;
@@ -1014,7 +1075,7 @@ void gen_bounded_ptr_deref(void)
     case 12: func = TOK___bound_ptr_indir12; break;
     case 16: func = TOK___bound_ptr_indir16; break;
     default:
-        error("unhandled size when derefencing bounded pointer");
+        tcc_error("unhandled size when dereferencing bounded pointer");
         func = 0;
         break;
     }
@@ -1031,4 +1092,5 @@ void gen_bounded_ptr_deref(void)
 
 /* end of X86 code generator */
 /*************************************************************/
-
+#endif
+/*************************************************************/

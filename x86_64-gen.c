@@ -20,10 +20,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <assert.h>
+#ifdef TARGET_DEFS_ONLY
 
 /* number of available registers */
-#define NB_REGS             5
+#define NB_REGS         5
+#define NB_ASM_REGS     8
 
 /* a register can belong to several classes. The classes must be
    sorted from more general to more precise (see gv2() code which does
@@ -33,6 +34,10 @@
 #define RC_RAX     0x0004
 #define RC_RCX     0x0008
 #define RC_RDX     0x0010
+#define RC_R8      0x0100
+#define RC_R9      0x0200
+#define RC_R10     0x0400
+#define RC_R11     0x0800
 #define RC_XMM0    0x0020
 #define RC_ST0     0x0040 /* only for long double */
 #define RC_IRET    RC_RAX /* function return: integer register */
@@ -44,29 +49,22 @@ enum {
     TREG_RAX = 0,
     TREG_RCX = 1,
     TREG_RDX = 2,
+    TREG_XMM0 = 3,
+    TREG_ST0 = 4,
+
     TREG_RSI = 6,
     TREG_RDI = 7,
     TREG_R8  = 8,
     TREG_R9  = 9,
+
     TREG_R10 = 10,
     TREG_R11 = 11,
-
-    TREG_XMM0 = 3,
-    TREG_ST0 = 4,
 
     TREG_MEM = 0x10,
 };
 
 #define REX_BASE(reg) (((reg) >> 3) & 1)
 #define REG_VALUE(reg) ((reg) & 7)
-
-int reg_classes[NB_REGS] = {
-    /* eax */ RC_INT | RC_RAX,
-    /* ecx */ RC_INT | RC_RCX,
-    /* edx */ RC_INT | RC_RDX,
-    /* xmm0 */ RC_FLOAT | RC_XMM0,
-    /* st0 */ RC_ST0,
-};
 
 /* return registers for function */
 #define REG_IRET TREG_RAX /* single word int return register */
@@ -91,7 +89,8 @@ int reg_classes[NB_REGS] = {
 #define EM_TCC_TARGET EM_X86_64
 
 /* relocation type for 32 bit data relocation */
-#define R_DATA_32   R_X86_64_64
+#define R_DATA_32   R_X86_64_32
+#define R_DATA_PTR  R_X86_64_64
 #define R_JMP_SLOT  R_X86_64_JUMP_SLOT
 #define R_COPY      R_X86_64_COPY
 
@@ -99,6 +98,25 @@ int reg_classes[NB_REGS] = {
 #define ELF_PAGE_SIZE  0x1000
 
 /******************************************************/
+#else /* ! TARGET_DEFS_ONLY */
+/******************************************************/
+#include "tcc.h"
+#include <assert.h>
+
+ST_DATA const int reg_classes[NB_REGS+7] = {
+    /* eax */ RC_INT | RC_RAX,
+    /* ecx */ RC_INT | RC_RCX,
+    /* edx */ RC_INT | RC_RDX,
+    /* xmm0 */ RC_FLOAT | RC_XMM0,
+    /* st0 */ RC_ST0,
+    0,
+    0,
+    0,
+    RC_INT | RC_R8,
+    RC_INT | RC_R9,
+    RC_INT | RC_R10,
+    RC_INT | RC_R11
+};
 
 static unsigned long func_sub_sp_offset;
 static int func_ret_sub;
@@ -122,6 +140,12 @@ void o(unsigned int c)
     }
 }
 
+void gen_le16(int v)
+{
+    g(v);
+    g(v >> 8);
+}
+
 void gen_le32(int c)
 {
     g(c);
@@ -140,6 +164,17 @@ void gen_le64(int64_t c)
     g(c >> 40);
     g(c >> 48);
     g(c >> 56);
+}
+
+void orex(int ll, int r, int r2, int b)
+{
+    if ((r & VT_VALMASK) >= VT_CONST)
+        r = 0;
+    if ((r2 & VT_VALMASK) >= VT_CONST)
+        r2 = 0;
+    if (ll || REX_BASE(r) || REX_BASE(r2))
+        o(0x40 | REX_BASE(r) | (REX_BASE(r2) << 2) | (ll << 3));
+    o(b);
 }
 
 /* output a symbol and patch all calls to it */
@@ -176,8 +211,9 @@ static int is_sse_float(int t) {
     return bt == VT_DOUBLE || bt == VT_FLOAT;
 }
 
+
 /* instruction + 4 bytes data. Return the address of the data */
-static int oad(int c, int s)
+ST_FUNC int oad(int c, int s)
 {
     int ind1;
 
@@ -191,8 +227,15 @@ static int oad(int c, int s)
     return s;
 }
 
+ST_FUNC void gen_addr32(int r, Sym *sym, int c)
+{
+    if (r & VT_SYM)
+        greloc(cur_text_section, sym, ind, R_X86_64_32);
+    gen_le32(c);
+}
+
 /* output constant with relocation if 'r & VT_SYM' is true */
-static void gen_addr64(int r, Sym *sym, int64_t c)
+ST_FUNC void gen_addr64(int r, Sym *sym, int64_t c)
 {
     if (r & VT_SYM)
         greloc(cur_text_section, sym, ind, R_X86_64_64);
@@ -200,7 +243,7 @@ static void gen_addr64(int r, Sym *sym, int64_t c)
 }
 
 /* output constant with relocation if 'r & VT_SYM' is true */
-static void gen_addrpc32(int r, Sym *sym, int c)
+ST_FUNC void gen_addrpc32(int r, Sym *sym, int c)
 {
     if (r & VT_SYM)
         greloc(cur_text_section, sym, ind, R_X86_64_PC32);
@@ -210,18 +253,25 @@ static void gen_addrpc32(int r, Sym *sym, int c)
 /* output got address with relocation */
 static void gen_gotpcrel(int r, Sym *sym, int c)
 {
+#ifndef TCC_TARGET_PE
     Section *sr;
     ElfW(Rela) *rel;
     greloc(cur_text_section, sym, ind, R_X86_64_GOTPCREL);
     sr = cur_text_section->reloc;
     rel = (ElfW(Rela) *)(sr->data + sr->data_offset - sizeof(ElfW(Rela)));
     rel->r_addend = -4;
+#else
+    printf("picpic: %s %x %x | %02x %02x %02x\n", get_tok_str(sym->v, NULL), c, r,
+        cur_text_section->data[ind-3],
+        cur_text_section->data[ind-2],
+        cur_text_section->data[ind-1]
+        );
+    greloc(cur_text_section, sym, ind, R_X86_64_PC32);
+#endif
     gen_le32(0);
-
     if (c) {
         /* we use add c, %xxx for displacement */
-        o(0x48 + REX_BASE(r));
-        o(0x81);
+        orex(1, r, 0, 0x81);
         o(0xc0 + REG_VALUE(r));
         gen_le32(c);
     }
@@ -255,7 +305,7 @@ static void gen_modrm_impl(int op_reg, int r, Sym *sym, int c, int is_got)
             g(0x00 | op_reg | REG_VALUE(r));
         }
     } else {
-        g(0x00 | op_reg | (r & VT_VALMASK));
+        g(0x00 | op_reg | REG_VALUE(r));
     }
 }
 
@@ -271,14 +321,8 @@ static void gen_modrm(int op_reg, int r, Sym *sym, int c)
 static void gen_modrm64(int opcode, int op_reg, int r, Sym *sym, int c)
 {
     int is_got;
-    int rex = 0x48 | (REX_BASE(op_reg) << 2);
-    if ((r & VT_VALMASK) != VT_CONST &&
-        (r & VT_VALMASK) != VT_LOCAL) {
-        rex |= REX_BASE(VT_VALMASK & r);
-    }
-    o(rex);
-    o(opcode);
     is_got = (op_reg & TREG_MEM) && !(sym->type.t & VT_STATIC);
+    orex(1, r, op_reg, opcode);
     gen_modrm_impl(op_reg, r, sym, c, is_got);
 }
 
@@ -289,10 +333,16 @@ void load(int r, SValue *sv)
     int v, t, ft, fc, fr;
     SValue v1;
 
+#ifdef TCC_TARGET_PE
+    SValue v2;
+    sv = pe_getimport(sv, &v2);
+#endif
+
     fr = sv->r;
     ft = sv->type.t;
     fc = sv->c.ul;
 
+#ifndef TCC_TARGET_PE
     /* we use indirect access via got */
     if ((fr & VT_VALMASK) == VT_CONST && (fr & VT_SYM) &&
         (fr & VT_LVAL) && !(sv->sym->type.t & VT_STATIC)) {
@@ -307,78 +357,98 @@ void load(int r, SValue *sv)
         /* load from the temporal register */
         fr = tr | VT_LVAL;
     }
+#endif
 
     v = fr & VT_VALMASK;
     if (fr & VT_LVAL) {
+        int b, ll;
         if (v == VT_LLOCAL) {
             v1.type.t = VT_PTR;
             v1.r = VT_LOCAL | VT_LVAL;
             v1.c.ul = fc;
-            load(r, &v1);
             fr = r;
+            if (!(reg_classes[fr] & RC_INT))
+                fr = get_reg(RC_INT);
+            load(fr, &v1);
         }
+        ll = 0;
         if ((ft & VT_BTYPE) == VT_FLOAT) {
-            o(0x6e0f66); /* movd */
-            r = 0;
+            b = 0x6e0f66, r = 0; /* movd */
         } else if ((ft & VT_BTYPE) == VT_DOUBLE) {
-            o(0x7e0ff3); /* movq */
-            r = 0;
+            b = 0x7e0ff3, r = 0; /* movq */
         } else if ((ft & VT_BTYPE) == VT_LDOUBLE) {
-            o(0xdb); /* fldt */
-            r = 5;
+            b = 0xdb, r = 5; /* fldt */
         } else if ((ft & VT_TYPE) == VT_BYTE) {
-            o(0xbe0f);   /* movsbl */
+            b = 0xbe0f;   /* movsbl */
         } else if ((ft & VT_TYPE) == (VT_BYTE | VT_UNSIGNED)) {
-            o(0xb60f);   /* movzbl */
+            b = 0xb60f;   /* movzbl */
         } else if ((ft & VT_TYPE) == VT_SHORT) {
-            o(0xbf0f);   /* movswl */
+            b = 0xbf0f;   /* movswl */
         } else if ((ft & VT_TYPE) == (VT_SHORT | VT_UNSIGNED)) {
-            o(0xb70f);   /* movzwl */
-        } else if (is64_type(ft)) {
-            gen_modrm64(0x8b, r, fr, sv->sym, fc);
-            return;
+            b = 0xb70f;   /* movzwl */
         } else {
-            o(0x8b);   /* movl */
+            ll = is64_type(ft);
+            b = 0x8b;
         }
-        gen_modrm(r, fr, sv->sym, fc);
+        if (ll) {
+            gen_modrm64(b, r, fr, sv->sym, fc);
+        } else {
+            orex(ll, fr, r, b);
+            gen_modrm(r, fr, sv->sym, fc);
+        }
     } else {
         if (v == VT_CONST) {
-            if ((ft & VT_BTYPE) == VT_LLONG) {
-                assert(!(fr & VT_SYM));
-                o(0x48);
-                o(0xb8 + REG_VALUE(r)); /* mov $xx, r */
-                gen_addr64(fr, sv->sym, sv->c.ull);
-            } else {
-                if (fr & VT_SYM) {
-                    if (sv->sym->type.t & VT_STATIC) {
-                        o(0x8d48);
-                        o(0x05 + REG_VALUE(r) * 8); /* lea xx(%rip), r */
-                        gen_addrpc32(fr, sv->sym, fc);
-                    } else {
-                        o(0x8b48);
-                        o(0x05 + REG_VALUE(r) * 8); /* mov xx(%rip), r */
-                        gen_gotpcrel(r, sv->sym, fc);
-                    }
+            if (fr & VT_SYM) {
+#ifdef TCC_TARGET_PE
+                orex(1,0,r,0x8d);
+                o(0x05 + REG_VALUE(r) * 8); /* lea xx(%rip), r */
+                gen_addrpc32(fr, sv->sym, fc);
+#else
+                if (sv->sym->type.t & VT_STATIC) {
+                    orex(1,0,r,0x8d);
+                    o(0x05 + REG_VALUE(r) * 8); /* lea xx(%rip), r */
+                    gen_addrpc32(fr, sv->sym, fc);
                 } else {
-                    o(0xb8 + REG_VALUE(r)); /* mov $xx, r */
-                    gen_le32(fc);
+                    orex(1,0,r,0x8b);
+                    o(0x05 + REG_VALUE(r) * 8); /* mov xx(%rip), r */
+                    gen_gotpcrel(r, sv->sym, fc);
                 }
+#endif
+            } else if (is64_type(ft)) {
+                orex(1,r,0, 0xb8 + REG_VALUE(r)); /* mov $xx, r */
+                gen_le64(sv->c.ull);
+            } else {
+                orex(0,r,0, 0xb8 + REG_VALUE(r)); /* mov $xx, r */
+                gen_le32(fc);
             }
         } else if (v == VT_LOCAL) {
-            o(0x48 | REX_BASE(r));
-            o(0x8d); /* lea xxx(%ebp), r */
+            orex(1,0,r,0x8d); /* lea xxx(%ebp), r */
             gen_modrm(r, VT_LOCAL, sv->sym, fc);
         } else if (v == VT_CMP) {
-            oad(0xb8 + r, 0); /* mov $0, r */
-            o(0x0f); /* setxx %br */
+            orex(0,r,0,0);
+	    if ((fc & ~0x100) != TOK_NE)
+              oad(0xb8 + REG_VALUE(r), 0); /* mov $0, r */
+	    else
+              oad(0xb8 + REG_VALUE(r), 1); /* mov $1, r */
+	    if (fc & 0x100)
+	      {
+	        /* This was a float compare.  If the parity bit is
+		   set the result was unordered, meaning false for everything
+		   except TOK_NE, and true for TOK_NE.  */
+		fc &= ~0x100;
+		o(0x037a + (REX_BASE(r) << 8));
+	      }
+            orex(0,r,0, 0x0f); /* setxx %br */
             o(fc);
-            o(0xc0 + r);
+            o(0xc0 + REG_VALUE(r));
         } else if (v == VT_JMP || v == VT_JMPI) {
             t = v & 1;
-            oad(0xb8 + r, t); /* mov $1, r */
-            o(0x05eb); /* jmp after */
+            orex(0,r,0,0);
+            oad(0xb8 + REG_VALUE(r), t); /* mov $1, r */
+            o(0x05eb + (REX_BASE(r) << 8)); /* jmp after */
             gsym(fc);
-            oad(0xb8 + r, t ^ 1); /* mov $0, r */
+            orex(0,r,0,0);
+            oad(0xb8 + REG_VALUE(r), t ^ 1); /* mov $0, r */
         } else if (v != r) {
             if (r == TREG_XMM0) {
                 assert(v == TREG_ST0);
@@ -395,9 +465,8 @@ void load(int r, SValue *sv)
                 o(0xf024);
                 o(0xf02444dd); /* fldl -0x10(%rsp) */
             } else {
-                o(0x48 | REX_BASE(r) | (REX_BASE(v) << 2));
-                o(0x89);
-                o(0xc0 + r + v * 8); /* mov v, r */
+                orex(1,r,v, 0x89);
+                o(0xc0 + REG_VALUE(r) + REG_VALUE(v) * 8); /* mov v, r */
             }
         }
     }
@@ -411,11 +480,17 @@ void store(int r, SValue *v)
     /* store the REX prefix in this variable when PIC is enabled */
     int pic = 0;
 
+#ifdef TCC_TARGET_PE
+    SValue v2;
+    v = pe_getimport(v, &v2);
+#endif
+
     ft = v->type.t;
     fc = v->c.ul;
     fr = v->r & VT_VALMASK;
     bt = ft & VT_BTYPE;
 
+#ifndef TCC_TARGET_PE
     /* we need to access the variable via got */
     if (fr == VT_CONST && (v->r & VT_SYM)) {
         /* mov xx(%rip), %r11 */
@@ -423,6 +498,7 @@ void store(int r, SValue *v)
         gen_gotpcrel(TREG_R11, v->sym, v->c.ul);
         pic = is64_type(bt) ? 0x49 : 0x41;
     }
+#endif
 
     /* XXX: incorrect if float reg to reg */
     if (bt == VT_FLOAT) {
@@ -445,11 +521,11 @@ void store(int r, SValue *v)
             o(0x66);
         o(pic);
         if (bt == VT_BYTE || bt == VT_BOOL)
-            o(0x88);
+            orex(0, 0, r, 0x88);
         else if (is64_type(bt))
             op64 = 0x89;
         else
-            o(0x89);
+            orex(0, 0, r, 0x89);
     }
     if (pic) {
         /* xxx r, (%r11) where xxx is mov, movq, fld, or etc */
@@ -457,9 +533,7 @@ void store(int r, SValue *v)
             o(op64);
         o(3 + (r << 3));
     } else if (op64) {
-        if (fr == VT_CONST ||
-            fr == VT_LOCAL ||
-            (v->r & VT_LVAL)) {
+        if (fr == VT_CONST || fr == VT_LOCAL || (v->r & VT_LVAL)) {
             gen_modrm64(op64, r, v->r, v->sym, fc);
         } else if (fr != r) {
             /* XXX: don't we really come here? */
@@ -467,25 +541,13 @@ void store(int r, SValue *v)
             o(0xc0 + fr + r * 8); /* mov r, fr */
         }
     } else {
-        if (fr == VT_CONST ||
-            fr == VT_LOCAL ||
-            (v->r & VT_LVAL)) {
+        if (fr == VT_CONST || fr == VT_LOCAL || (v->r & VT_LVAL)) {
             gen_modrm(r, v->r, v->sym, fc);
         } else if (fr != r) {
             /* XXX: don't we really come here? */
             abort();
             o(0xc0 + fr + r * 8); /* mov r, fr */
         }
-    }
-}
-
-static void gadd_sp(int val)
-{
-    if (val == (char)val) {
-        o(0xc48348);
-        g(val);
-    } else {
-        oad(0xc48148, val); /* add $xxx, %rsp */
     }
 }
 
@@ -515,17 +577,257 @@ static void gcall_or_jmp(int is_jmp)
     }
 }
 
-static uint8_t arg_regs[6] = {
+#ifdef TCC_TARGET_PE
+
+#define REGN 4
+static const uint8_t arg_regs[] = {
+    TREG_RCX, TREG_RDX, TREG_R8, TREG_R9
+};
+
+static int func_scratch;
+
+/* Generate function call. The function address is pushed first, then
+   all the parameters in call order. This functions pops all the
+   parameters and the function address. */
+
+void gen_offs_sp(int b, int r, int d)
+{
+    orex(1,0,r & 0x100 ? 0 : r, b);
+    if (d == (char)d) {
+        o(0x2444 | (REG_VALUE(r) << 3));
+        g(d);
+    } else {
+        o(0x2484 | (REG_VALUE(r) << 3));
+        gen_le32(d);
+    }
+}
+
+void gfunc_call(int nb_args)
+{
+    int size, align, r, args_size, i, d, j, bt, struct_size;
+    int nb_reg_args, gen_reg;
+
+    nb_reg_args = nb_args;
+    args_size = (nb_reg_args < REGN ? REGN : nb_reg_args) * PTR_SIZE;
+
+    /* for struct arguments, we need to call memcpy and the function
+       call breaks register passing arguments we are preparing.
+       So, we process arguments which will be passed by stack first. */
+    struct_size = args_size;
+    for(i = 0; i < nb_args; i++) {
+        SValue *sv = &vtop[-i];
+        bt = (sv->type.t & VT_BTYPE);
+        if (bt == VT_STRUCT) {
+            size = type_size(&sv->type, &align);
+            /* align to stack align size */
+            size = (size + 15) & ~15;
+            /* generate structure store */
+            r = get_reg(RC_INT);
+            gen_offs_sp(0x8d, r, struct_size);
+            struct_size += size;
+
+            /* generate memcpy call */
+            vset(&sv->type, r | VT_LVAL, 0);
+            vpushv(sv);
+            vstore();
+            --vtop;
+
+        } else if (bt == VT_LDOUBLE) {
+
+            gv(RC_ST0);
+            gen_offs_sp(0xdb, 0x107, struct_size);
+            struct_size += 16;
+
+        }
+    }
+
+    if (func_scratch < struct_size)
+        func_scratch = struct_size;
+#if 1
+    for (i = 0; i < REGN; ++i)
+        save_reg(arg_regs[i]);
+    save_reg(TREG_RAX);
+#endif
+    gen_reg = nb_reg_args;
+    struct_size = args_size;
+
+    for(i = 0; i < nb_args; i++) {
+        bt = (vtop->type.t & VT_BTYPE);
+
+        if (bt == VT_STRUCT || bt == VT_LDOUBLE) {
+            if (bt == VT_LDOUBLE)
+                size = 16;
+            else
+                size = type_size(&vtop->type, &align);
+            /* align to stack align size */
+            size = (size + 15) & ~15;
+            j = --gen_reg;
+            if (j >= REGN) {
+                d = TREG_RAX;
+                gen_offs_sp(0x8d, d, struct_size);
+                gen_offs_sp(0x89, d, j*8);
+            } else {
+                d = arg_regs[j];
+                gen_offs_sp(0x8d, d, struct_size);
+            }
+            struct_size += size;
+
+        } else if (is_sse_float(vtop->type.t)) {
+            gv(RC_FLOAT); /* only one float register */
+            j = --gen_reg;
+            if (j >= REGN) {
+                /* movq %xmm0, j*8(%rsp) */
+                gen_offs_sp(0xd60f66, 0x100, j*8);
+            } else {
+                /* movaps %xmm0, %xmmN */
+                o(0x280f);
+                o(0xc0 + (j << 3));
+                d = arg_regs[j];
+                /* mov %xmm0, %rxx */
+                o(0x66);
+                orex(1,d,0, 0x7e0f);
+                o(0xc0 + REG_VALUE(d));
+            }
+        } else {
+            j = --gen_reg;
+            if (j >= REGN) {
+                r = gv(RC_INT);
+                gen_offs_sp(0x89, r, j*8);
+            } else {
+                d = arg_regs[j];
+                if (d < NB_REGS) {
+                    gv(reg_classes[d] & ~RC_INT);
+                } else {
+                    r = gv(RC_INT);
+                    if (d != r) {
+                        orex(1,d,r, 0x89);
+                        o(0xc0 + REG_VALUE(d) + REG_VALUE(r) * 8);
+                    }
+                }
+
+            }
+        }
+        vtop--;
+    }
+    save_regs(0);
+    gcall_or_jmp(0);
+    vtop--;
+}
+
+
+#define FUNC_PROLOG_SIZE 11
+
+/* generate function prolog of type 't' */
+void gfunc_prolog(CType *func_type)
+{
+    int addr, reg_param_index, bt;
+    Sym *sym;
+    CType *type;
+
+    func_ret_sub = 0;
+    func_scratch = 0;
+    loc = 0;
+
+    addr = PTR_SIZE * 2;
+    ind += FUNC_PROLOG_SIZE;
+    func_sub_sp_offset = ind;
+    reg_param_index = 0;
+
+    sym = func_type->ref;
+
+    /* if the function returns a structure, then add an
+       implicit pointer parameter */
+    func_vt = sym->type;
+    if ((func_vt.t & VT_BTYPE) == VT_STRUCT) {
+        gen_modrm64(0x89, arg_regs[reg_param_index], VT_LOCAL, NULL, addr);
+        reg_param_index++;
+        addr += PTR_SIZE;
+    }
+
+    /* define parameters */
+    while ((sym = sym->next) != NULL) {
+        type = &sym->type;
+        bt = type->t & VT_BTYPE;
+        if (reg_param_index < REGN) {
+            /* save arguments passed by register */
+            gen_modrm64(0x89, arg_regs[reg_param_index], VT_LOCAL, NULL, addr);
+        }
+        if (bt == VT_STRUCT || bt == VT_LDOUBLE) {
+            sym_push(sym->v & ~SYM_FIELD, type, VT_LOCAL | VT_LVAL | VT_REF, addr);
+        } else {
+            sym_push(sym->v & ~SYM_FIELD, type, VT_LOCAL | VT_LVAL, addr);
+        }
+        reg_param_index++;
+        addr += PTR_SIZE;
+    }
+
+    while (reg_param_index < REGN) {
+        if (func_type->ref->c == FUNC_ELLIPSIS)
+            gen_modrm64(0x89, arg_regs[reg_param_index], VT_LOCAL, NULL, addr);
+        reg_param_index++;
+        addr += PTR_SIZE;
+    }
+}
+
+/* generate function epilog */
+void gfunc_epilog(void)
+{
+    int v, saved_ind;
+
+    o(0xc9); /* leave */
+    if (func_ret_sub == 0) {
+        o(0xc3); /* ret */
+    } else {
+        o(0xc2); /* ret n */
+        g(func_ret_sub);
+        g(func_ret_sub >> 8);
+    }
+
+    saved_ind = ind;
+    ind = func_sub_sp_offset - FUNC_PROLOG_SIZE;
+    /* align local size to word & save local variables */
+    v = (func_scratch + -loc + 15) & -16;
+
+    if (v >= 4096) {
+        Sym *sym = external_global_sym(TOK___chkstk, &func_old_type, 0);
+        oad(0xb8, v); /* mov stacksize, %eax */
+        oad(0xe8, -4); /* call __chkstk, (does the stackframe too) */
+        greloc(cur_text_section, sym, ind-4, R_X86_64_PC32);
+        o(0x90); /* fill for FUNC_PROLOG_SIZE = 11 bytes */
+    } else {
+        o(0xe5894855);  /* push %rbp, mov %rsp, %rbp */
+        o(0xec8148);  /* sub rsp, stacksize */
+        gen_le32(v);
+    }
+
+    cur_text_section->data_offset = saved_ind;
+    pe_add_unwind_data(ind, saved_ind, v);
+    ind = cur_text_section->data_offset;
+}
+
+#else
+
+static void gadd_sp(int val)
+{
+    if (val == (char)val) {
+        o(0xc48348);
+        g(val);
+    } else {
+        oad(0xc48148, val); /* add $xxx, %rsp */
+    }
+}
+
+#define REGN 6
+static const uint8_t arg_regs[REGN] = {
     TREG_RDI, TREG_RSI, TREG_RDX, TREG_RCX, TREG_R8, TREG_R9
 };
+
 /* Generate function call. The function address is pushed first, then
    all the parameters in call order. This functions pops all the
    parameters and the function address. */
 void gfunc_call(int nb_args)
 {
-    int size, align, r, args_size, i, func_call;
-    Sym *func_sym;
-    SValue *orig_vtop;
+    int size, align, r, args_size, i;
     int nb_reg_args = 0;
     int nb_sse_args = 0;
     int sse_reg, gen_reg;
@@ -534,7 +836,8 @@ void gfunc_call(int nb_args)
     args_size = 0;
     for(i = 0; i < nb_args; i++) {
         if ((vtop[-i].type.t & VT_BTYPE) == VT_STRUCT) {
-            args_size += type_size(&vtop->type, &align);
+            args_size += type_size(&vtop[-i].type, &align);
+            args_size = (args_size + 7) & ~7;
         } else if ((vtop[-i].type.t & VT_BTYPE) == VT_LDOUBLE) {
             args_size += 16;
         } else if (is_sse_float(vtop[-i].type.t)) {
@@ -542,41 +845,50 @@ void gfunc_call(int nb_args)
             if (nb_sse_args > 8) args_size += 8;
         } else {
             nb_reg_args++;
-            if (nb_reg_args > 6) args_size += 8;
+            if (nb_reg_args > REGN) args_size += 8;
         }
     }
 
     /* for struct arguments, we need to call memcpy and the function
        call breaks register passing arguments we are preparing.
        So, we process arguments which will be passed by stack first. */
-    orig_vtop = vtop;
     gen_reg = nb_reg_args;
     sse_reg = nb_sse_args;
+
     /* adjust stack to align SSE boundary */
-    if (args_size &= 8) {
-        o(0x50); /* push $rax */
+    if (args_size &= 15) {
+        /* fetch cpu flag before the following sub will change the value */
+        if (vtop >= vstack && (vtop->r & VT_VALMASK) == VT_CMP)
+            gv(RC_INT);
+
+        args_size = 16 - args_size;
+        o(0x48);
+        oad(0xec81, args_size); /* sub $xxx, %rsp */
     }
+
     for(i = 0; i < nb_args; i++) {
+	/* Swap argument to top, it will possibly be changed here,
+	   and might use more temps.  All arguments must remain on the
+	   stack, so that get_reg can correctly evict some of them onto
+	   stack.  We could use also use a vrott(nb_args) at the end
+	   of this loop, but this seems faster.  */
+        SValue tmp = vtop[0];
+	vtop[0] = vtop[-i];
+	vtop[-i] = tmp;
         if ((vtop->type.t & VT_BTYPE) == VT_STRUCT) {
             size = type_size(&vtop->type, &align);
             /* align to stack align size */
-            size = (size + 3) & ~3;
+            size = (size + 7) & ~7;
             /* allocate the necessary size on stack */
             o(0x48);
             oad(0xec81, size); /* sub $xxx, %rsp */
             /* generate structure store */
             r = get_reg(RC_INT);
-            o(0x48 + REX_BASE(r));
-            o(0x89); /* mov %rsp, r */
-            o(0xe0 + r);
-            {
-                /* following code breaks vtop[1] */
-                SValue tmp = vtop[1];
-                vset(&vtop->type, r | VT_LVAL, 0);
-                vswap();
-                vstore();
-                vtop[1] = tmp;
-            }
+            orex(1, r, 0, 0x89); /* mov %rsp, r */
+            o(0xe0 + REG_VALUE(r));
+	    vset(&vtop->type, r | VT_LVAL, 0);
+	    vswap();
+	    vstore();
             args_size += size;
         } else if ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE) {
             gv(RC_ST0);
@@ -600,15 +912,21 @@ void gfunc_call(int nb_args)
             int j = --gen_reg;
             /* simple type */
             /* XXX: implicit cast ? */
-            if (j >= 6) {
+            if (j >= REGN) {
                 r = gv(RC_INT);
-                o(0x50 + r); /* push r */
+                orex(0,r,0,0x50 + REG_VALUE(r)); /* push r */
                 args_size += 8;
             }
         }
-        vtop--;
+
+	/* And swap the argument back to it's original position.  */
+        tmp = vtop[0];
+	vtop[0] = vtop[-i];
+	vtop[-i] = tmp;
     }
-    vtop = orig_vtop;
+
+    /* XXX This should be superfluous.  */
+    save_regs(0); /* save used temporary registers */
 
     /* then, we prepare register passing arguments.
        Note that we cannot set RDX and RCX in this loop because gv()
@@ -631,26 +949,24 @@ void gfunc_call(int nb_args)
             int j = --gen_reg;
             /* simple type */
             /* XXX: implicit cast ? */
-            if (j < 6) {
+            if (j < REGN) {
+                int d = arg_regs[j];
                 r = gv(RC_INT);
-                if (j < 2) {
-                    o(0x8948); /* mov */
-                    o(0xc0 + r * 8 + arg_regs[j]);
-                } else if (j < 4) {
-                    o(0x8949); /* mov */
+                if (j == 2 || j == 3)
                     /* j=2: r10, j=3: r11 */
-                    o(0xc0 + r * 8 + j);
-                } else {
-                    o(0x8949); /* mov */
-                    /* j=4: r8, j=5: r9 */
-                    o(0xc0 + r * 8 + j - 4);
-                }
+                    d = j + 8;
+                orex(1,d,r,0x89); /* mov */
+                o(0xc0 + REG_VALUE(r) * 8 + REG_VALUE(d));
             }
         }
         vtop--;
     }
 
-    save_regs(0); /* save used temporary registers */
+    /* We shouldn't have many operands on the stack anymore, but the
+       call address itself is still there, and it might be in %eax
+       (or edx/ecx) currently, which the below writes would clobber.
+       So evict all remaining operands here.  */
+    save_regs(0);
 
     /* Copy R10 and R11 into RDX and RCX, respectively */
     if (nb_reg_args > 2) {
@@ -660,8 +976,6 @@ void gfunc_call(int nb_args)
         }
     }
 
-    func_sym = vtop->type.ref;
-    func_call = FUNC_CALL(func_sym->r);
     oad(0xb8, nb_sse_args < 8 ? nb_sse_args : 8); /* mov nb_sse_args, %eax */
     gcall_or_jmp(0);
     if (args_size)
@@ -669,13 +983,8 @@ void gfunc_call(int nb_args)
     vtop--;
 }
 
-#ifdef TCC_TARGET_PE
-/* XXX: support PE? */
-#warning "PE isn't tested at all"
-#define FUNC_PROLOG_SIZE 12
-#else
+
 #define FUNC_PROLOG_SIZE 11
-#endif
 
 static void push_arg_reg(int i) {
     loc -= 8;
@@ -685,19 +994,17 @@ static void push_arg_reg(int i) {
 /* generate function prolog of type 't' */
 void gfunc_prolog(CType *func_type)
 {
-    int i, addr, align, size, func_call;
+    int i, addr, align, size;
     int param_index, param_addr, reg_param_index, sse_param_index;
     Sym *sym;
     CType *type;
 
-    func_ret_sub = 0;
-
     sym = func_type->ref;
-    func_call = FUNC_CALL(sym->r);
     addr = PTR_SIZE * 2;
     loc = 0;
     ind += FUNC_PROLOG_SIZE;
     func_sub_sp_offset = ind;
+    func_ret_sub = 0;
 
     if (func_type->ref->c == FUNC_ELLIPSIS) {
         int seen_reg_num, seen_sse_num, seen_stack_size;
@@ -716,12 +1023,12 @@ void gfunc_prolog(CType *func_type)
                 }
             } else if ((type->t & VT_BTYPE) == VT_STRUCT) {
                 size = type_size(type, &align);
-                size = (size + 3) & ~3;
+                size = (size + 7) & ~7;
                 seen_stack_size += size;
             } else if ((type->t & VT_BTYPE) == VT_LDOUBLE) {
                 seen_stack_size += LDOUBLE_SIZE;
             } else {
-                if (seen_reg_num < 6) {
+                if (seen_reg_num < REGN) {
                     seen_reg_num++;
                 } else {
                     seen_stack_size += 8;
@@ -750,8 +1057,8 @@ void gfunc_prolog(CType *func_type)
             gen_le32(loc + 8);
             gen_le32(0);
         }
-        for (i = 0; i < 6; i++) {
-            push_arg_reg(5 - i);
+        for (i = 0; i < REGN; i++) {
+            push_arg_reg(REGN-1-i);
         }
     }
 
@@ -775,7 +1082,7 @@ void gfunc_prolog(CType *func_type)
     while ((sym = sym->next) != NULL) {
         type = &sym->type;
         size = type_size(type, &align);
-        size = (size + 3) & ~3;
+        size = (size + 7) & ~7;
         if (is_sse_float(type->t)) {
             if (sse_param_index < 8) {
                 /* save arguments passed by register */
@@ -788,12 +1095,13 @@ void gfunc_prolog(CType *func_type)
                 addr += size;
             }
             sse_param_index++;
+
         } else if ((type->t & VT_BTYPE) == VT_STRUCT ||
                    (type->t & VT_BTYPE) == VT_LDOUBLE) {
             param_addr = addr;
             addr += size;
         } else {
-            if (reg_param_index < 6) {
+            if (reg_param_index < REGN) {
                 /* save arguments passed by register */
                 push_arg_reg(reg_param_index);
                 param_addr = loc;
@@ -826,24 +1134,13 @@ void gfunc_epilog(void)
     v = (-loc + 15) & -16;
     saved_ind = ind;
     ind = func_sub_sp_offset - FUNC_PROLOG_SIZE;
-#ifdef TCC_TARGET_PE
-    if (v >= 4096) {
-        Sym *sym = external_global_sym(TOK___chkstk, &func_old_type, 0);
-        oad(0xb8, v); /* mov stacksize, %eax */
-        oad(0xe8, -4); /* call __chkstk, (does the stackframe too) */
-        greloc(cur_text_section, sym, ind-4, R_X86_64_PC32);
-    } else
-#endif
-    {
-        o(0xe5894855);  /* push %rbp, mov %rsp, %rbp */
-        o(0xec8148);  /* sub rsp, stacksize */
-        gen_le32(v);
-#if FUNC_PROLOG_SIZE == 12
-        o(0x90);  /* adjust to FUNC_PROLOG_SIZE */
-#endif
-    }
+    o(0xe5894855);  /* push %rbp, mov %rsp, %rbp */
+    o(0xec8148);  /* sub rsp, stacksize */
+    gen_le32(v);
     ind = saved_ind;
 }
+
+#endif /* not PE */
 
 /* generate a jump to a label */
 int gjmp(int t)
@@ -872,6 +1169,24 @@ int gtst(int inv, int t)
     v = vtop->r & VT_VALMASK;
     if (v == VT_CMP) {
         /* fast case : can jump directly since flags are set */
+	if (vtop->c.i & 0x100)
+	  {
+	    /* This was a float compare.  If the parity flag is set
+	       the result was unordered.  For anything except != this
+	       means false and we don't jump (anding both conditions).
+	       For != this means true (oring both).
+	       Take care about inverting the test.  We need to jump
+	       to our target if the result was unordered and test wasn't NE,
+	       otherwise if unordered we don't want to jump.  */
+	    vtop->c.i &= ~0x100;
+	    if (!inv == (vtop->c.i != TOK_NE))
+	      o(0x067a);  /* jp +6 */
+	    else
+	      {
+	        g(0x0f);
+		t = psym(0x8a, t); /* jp t */
+	      }
+	  }
         g(0x0f);
         t = psym((vtop->c.i - 16) ^ inv, t);
     } else if (v == VT_JMP || v == VT_JMPI) {
@@ -899,8 +1214,8 @@ int gtst(int inv, int t)
                 t = gjmp(t);
         } else {
             v = gv(RC_INT);
-            o(0x85);
-            o(0xc0 + v * 9);
+            orex(0,v,v,0x85);
+            o(0xc0 + REG_VALUE(v) * 9);
             g(0x0f);
             t = psym(0x85 ^ inv, t);
         }
@@ -913,41 +1228,37 @@ int gtst(int inv, int t)
 void gen_opi(int op)
 {
     int r, fr, opc, c;
+    int ll, uu, cc;
+
+    ll = is64_type(vtop[-1].type.t);
+    uu = (vtop[-1].type.t & VT_UNSIGNED) != 0;
+    cc = (vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
 
     switch(op) {
     case '+':
     case TOK_ADDC1: /* add with carry generation */
         opc = 0;
     gen_op8:
-        if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST &&
-            !is64_type(vtop->type.t)) {
+        if (cc && (!ll || (int)vtop->c.ll == vtop->c.ll)) {
             /* constant case */
             vswap();
             r = gv(RC_INT);
-            if (is64_type(vtop->type.t)) {
-                o(0x48 | REX_BASE(r));
-            }
             vswap();
             c = vtop->c.i;
             if (c == (char)c) {
                 /* XXX: generate inc and dec for smaller code ? */
-                o(0x83);
+                orex(ll, r, 0, 0x83);
                 o(0xc0 | (opc << 3) | REG_VALUE(r));
                 g(c);
             } else {
-                o(0x81);
+                orex(ll, r, 0, 0x81);
                 oad(0xc0 | (opc << 3) | REG_VALUE(r), c);
             }
         } else {
             gv2(RC_INT, RC_INT);
             r = vtop[-1].r;
             fr = vtop[0].r;
-            if (opc != 7 ||
-                is64_type(vtop[0].type.t) || (vtop[0].type.t & VT_UNSIGNED) ||
-                is64_type(vtop[-1].type.t) || (vtop[-1].type.t & VT_UNSIGNED)) {
-                o(0x48 | REX_BASE(r) | (REX_BASE(fr) << 2));
-            }
-            o((opc << 3) | 0x01);
+            orex(ll, r, fr, (opc << 3) | 0x01);
             o(0xc0 + REG_VALUE(r) + REG_VALUE(fr) * 8);
         }
         vtop--;
@@ -979,13 +1290,9 @@ void gen_opi(int op)
         gv2(RC_INT, RC_INT);
         r = vtop[-1].r;
         fr = vtop[0].r;
-        if (is64_type(vtop[0].type.t) || (vtop[0].type.t & VT_UNSIGNED) ||
-            is64_type(vtop[-1].type.t) || (vtop[-1].type.t & VT_UNSIGNED)) {
-            o(0x48 | REX_BASE(fr) | (REX_BASE(r) << 2));
-        }
+        orex(ll, fr, r, 0xaf0f); /* imul fr, r */
+        o(0xc0 + REG_VALUE(fr) + REG_VALUE(r) * 8);
         vtop--;
-        o(0xaf0f); /* imul fr, r */
-        o(0xc0 + fr + r * 8);
         break;
     case TOK_SHL:
         opc = 4;
@@ -997,39 +1304,32 @@ void gen_opi(int op)
         opc = 7;
     gen_shift:
         opc = 0xc0 | (opc << 3);
-        if ((vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST) {
+        if (cc) {
             /* constant case */
             vswap();
             r = gv(RC_INT);
-            if ((vtop->type.t & VT_BTYPE) == VT_LLONG) {
-                o(0x48 | REX_BASE(r));
-                c = 0x3f;
-            } else {
-                c = 0x1f;
-            }
             vswap();
-            c &= vtop->c.i;
-            o(0xc1); /* shl/shr/sar $xxx, r */
-            o(opc | r);
-            g(c);
+            orex(ll, r, 0, 0xc1); /* shl/shr/sar $xxx, r */
+            o(opc | REG_VALUE(r));
+            g(vtop->c.i & (ll ? 63 : 31));
         } else {
             /* we generate the shift in ecx */
             gv2(RC_INT, RC_RCX);
             r = vtop[-1].r;
-            if ((vtop[-1].type.t & VT_BTYPE) == VT_LLONG) {
-                o(0x48 | REX_BASE(r));
-            }
-            o(0xd3); /* shl/shr/sar %cl, r */
-            o(opc | r);
+            orex(ll, r, 0, 0xd3); /* shl/shr/sar %cl, r */
+            o(opc | REG_VALUE(r));
         }
         vtop--;
         break;
-    case '/':
     case TOK_UDIV:
-    case TOK_PDIV:
-    case '%':
     case TOK_UMOD:
-    case TOK_UMULL:
+        uu = 1;
+        goto divmod;
+    case '/':
+    case '%':
+    case TOK_PDIV:
+        uu = 0;
+    divmod:
         /* first operand must be in eax */
         /* XXX: need better constraint for second operand */
         gv2(RC_RAX, RC_RCX);
@@ -1037,30 +1337,13 @@ void gen_opi(int op)
         fr = vtop[0].r;
         vtop--;
         save_reg(TREG_RDX);
-        if (op == TOK_UMULL) {
-            o(0xf7); /* mul fr */
-            o(0xe0 + fr);
-            vtop->r2 = TREG_RDX;
+        orex(ll, 0, 0, uu ? 0xd231 : 0x99); /* xor %edx,%edx : cqto */
+        orex(ll, fr, 0, 0xf7); /* div fr, %eax */
+        o((uu ? 0xf0 : 0xf8) + REG_VALUE(fr));
+        if (op == '%' || op == TOK_UMOD)
+            r = TREG_RDX;
+        else
             r = TREG_RAX;
-        } else {
-            if (op == TOK_UDIV || op == TOK_UMOD) {
-                o(0xf7d231); /* xor %edx, %edx, div fr, %eax */
-                o(0xf0 + fr);
-            } else {
-                if ((vtop->type.t & VT_BTYPE) & VT_LLONG) {
-                    o(0x9948); /* cqto */
-                    o(0x48 + REX_BASE(fr));
-                } else {
-                    o(0x99); /* cltd */
-                }
-                o(0xf7); /* idiv fr, %eax */
-                o(0xf8 + fr);
-            }
-            if (op == '%' || op == TOK_UMOD)
-                r = TREG_RDX;
-            else
-                r = TREG_RAX;
-        }
         vtop->r = r;
         break;
     default:
@@ -1174,7 +1457,7 @@ void gen_opf(int op)
             if ((r & VT_VALMASK) == VT_LLOCAL) {
                 SValue v1;
                 r = get_reg(RC_INT);
-                v1.type.t = VT_INT;
+                v1.type.t = VT_PTR;
                 v1.r = VT_LOCAL | VT_LVAL;
                 v1.c.ul = fc;
                 load(r, &v1);
@@ -1212,7 +1495,7 @@ void gen_opf(int op)
 
             vtop--;
             vtop->r = VT_CMP;
-            vtop->c.i = op;
+            vtop->c.i = op | 0x100;
         } else {
             /* no memory reference possible for long double operations */
             if ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE) {
@@ -1245,7 +1528,7 @@ void gen_opf(int op)
                 if ((r & VT_VALMASK) == VT_LLOCAL) {
                     SValue v1;
                     r = get_reg(RC_INT);
-                    v1.type.t = VT_INT;
+                    v1.type.t = VT_PTR;
                     v1.r = VT_LOCAL | VT_LVAL;
                     v1.c.ul = fc;
                     load(r, &v1);
@@ -1400,10 +1683,7 @@ void gen_cvt_ftoi(int t)
     } else {
         assert(0);
     }
-    if (size == 8) {
-        o(0x48 + REX_BASE(r));
-    }
-    o(0x2c0f); /* cvttss2si or cvttsd2si */
+    orex(size == 8, r, 0, 0x2c0f); /* cvttss2si or cvttsd2si */
     o(0xc0 + (REG_VALUE(r) << 3));
     vtop->r = r;
 }
@@ -1417,3 +1697,5 @@ void ggoto(void)
 
 /* end of x86-64 code generator */
 /*************************************************************/
+#endif /* ! TARGET_DEFS_ONLY */
+/******************************************************/

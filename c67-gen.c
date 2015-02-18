@@ -18,6 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifdef TARGET_DEFS_ONLY
+
 //#define ASSEMBLY_LISTING_C67
 
 /* number of available registers */
@@ -85,12 +87,52 @@ enum {
     TREG_C67_B13,
 };
 
-int reg_classes[NB_REGS] = {
-						/* eax */ RC_INT | RC_FLOAT | RC_EAX,
-						// only allow even regs for floats (allow for doubles)
+/* return registers for function */
+#define REG_IRET TREG_C67_A4	/* single word int return register */
+#define REG_LRET TREG_C67_A5	/* second word return register (for long long) */
+#define REG_FRET TREG_C67_A4	/* float return register */
+
+/* defined if function parameters must be evaluated in reverse order */
+//#define INVERT_FUNC_PARAMS
+
+/* defined if structures are passed as pointers. Otherwise structures
+   are directly pushed on stack. */
+//#define FUNC_STRUCT_PARAM_AS_PTR
+
+/* pointer size, in bytes */
+#define PTR_SIZE 4
+
+/* long double size and alignment, in bytes */
+#define LDOUBLE_SIZE  12
+#define LDOUBLE_ALIGN 4
+/* maximum alignment (for aligned attribute support) */
+#define MAX_ALIGN     8
+
+/******************************************************/
+/* ELF defines */
+
+#define EM_TCC_TARGET EM_C60
+
+/* relocation type for 32 bit data relocation */
+#define R_DATA_32   R_C60_32
+#define R_DATA_PTR  R_C60_32
+#define R_JMP_SLOT  R_C60_JMP_SLOT
+#define R_COPY      R_C60_COPY
+
+#define ELF_START_ADDR 0x00000400
+#define ELF_PAGE_SIZE  0x1000
+
+/******************************************************/
+#else /* ! TARGET_DEFS_ONLY */
+/******************************************************/
+#include "tcc.h"
+
+ST_DATA const int reg_classes[NB_REGS] = {
+    /* eax */ RC_INT | RC_FLOAT | RC_EAX, 
+    // only allow even regs for floats (allow for doubles)
     /* ecx */ RC_INT | RC_ECX,
-								/* edx */ RC_INT | RC_INT_BSIDE | RC_FLOAT | RC_EDX,
-								// only allow even regs for floats (allow for doubles)
+    /* edx */ RC_INT | RC_INT_BSIDE | RC_FLOAT | RC_EDX,
+    // only allow even regs for floats (allow for doubles)
     /* st0 */ RC_INT | RC_INT_BSIDE | RC_ST0,
     /* A4  */ RC_C67_A4,
     /* A5  */ RC_C67_A5,
@@ -114,24 +156,11 @@ int reg_classes[NB_REGS] = {
     /* B13  */ RC_C67_B11
 };
 
-/* return registers for function */
-#define REG_IRET TREG_C67_A4	/* single word int return register */
-#define REG_LRET TREG_C67_A5	/* second word return register (for long long) */
-#define REG_FRET TREG_C67_A4	/* float return register */
-
-
-#define ALWAYS_ASSERT(x) \
-do {\
-   if (!(x))\
-       error("internal compiler error file at %s:%d", __FILE__, __LINE__);\
-} while (0)
-
 // although tcc thinks it is passing parameters on the stack,
 // the C67 really passes up to the first 10 params in special
 // regs or regs pairs (for 64 bit params).  So keep track of
 // the stack offsets so we can translate to the appropriate 
 // reg (pair)
-
 
 #define NoCallArgsPassedOnStack 10
 int NoOfCurFuncArgs;
@@ -139,41 +168,23 @@ int TranslateStackToReg[NoCallArgsPassedOnStack];
 int ParamLocOnStack[NoCallArgsPassedOnStack];
 int TotalBytesPushedOnStack;
 
-/* defined if function parameters must be evaluated in reverse order */
+#ifndef FALSE
+# define FALSE 0
+# define TRUE 1
+#endif
 
-//#define INVERT_FUNC_PARAMS
+#undef BOOL
+#define BOOL int
 
-/* defined if structures are passed as pointers. Otherwise structures
-   are directly pushed on stack. */
-//#define FUNC_STRUCT_PARAM_AS_PTR
-
-/* pointer size, in bytes */
-#define PTR_SIZE 4
-
-/* long double size and alignment, in bytes */
-#define LDOUBLE_SIZE  12
-#define LDOUBLE_ALIGN 4
-/* maximum alignment (for aligned attribute support) */
-#define MAX_ALIGN     8
+#define ALWAYS_ASSERT(x) \
+do {\
+   if (!(x))\
+       tcc_error("internal compiler error file at %s:%d", __FILE__, __LINE__);\
+} while (0)
 
 /******************************************************/
-/* ELF defines */
-
-#define EM_TCC_TARGET EM_C60
-
-/* relocation type for 32 bit data relocation */
-#define R_DATA_32   R_C60_32
-#define R_JMP_SLOT  R_C60_JMP_SLOT
-#define R_COPY      R_C60_COPY
-
-#define ELF_START_ADDR 0x00000400
-#define ELF_PAGE_SIZE  0x1000
-
-/******************************************************/
-
 static unsigned long func_sub_sp_offset;
 static int func_ret_sub;
-
 
 static BOOL C67_invert_test;
 static int C67_compare_reg;
@@ -181,7 +192,6 @@ static int C67_compare_reg;
 #ifdef ASSEMBLY_LISTING_C67
 FILE *f = NULL;
 #endif
-
 
 void C67_g(int c)
 {
@@ -1552,7 +1562,7 @@ void C67_SHR(int r, int v)
 void load(int r, SValue * sv)
 {
     int v, t, ft, fc, fr, size = 0, element;
-    BOOL Unsigned = false;
+    BOOL Unsigned = FALSE;
     SValue v1;
 
     fr = sv->r;
@@ -1568,7 +1578,7 @@ void load(int r, SValue * sv)
 	    load(r, &v1);
 	    fr = r;
 	} else if ((ft & VT_BTYPE) == VT_LDOUBLE) {
-	    error("long double not supported");
+	    tcc_error("long double not supported");
 	} else if ((ft & VT_TYPE) == VT_BYTE) {
 	    size = 1;
 	} else if ((ft & VT_TYPE) == (VT_BYTE | VT_UNSIGNED)) {
@@ -1722,7 +1732,7 @@ void store(int r, SValue * v)
     /* XXX: incorrect if float reg to reg */
 
     if (bt == VT_LDOUBLE) {
-	error("long double not supported");
+	tcc_error("long double not supported");
     } else {
 	if (bt == VT_SHORT)
 	    size = 2;
@@ -1877,7 +1887,7 @@ void gfunc_call(int nb_args)
     int args_sizes[NoCallArgsPassedOnStack];
 
     if (nb_args > NoCallArgsPassedOnStack) {
-	error("more than 10 function params not currently supported");
+	tcc_error("more than 10 function params not currently supported");
 	// handle more than 10, put some on the stack
     }
 
@@ -1892,9 +1902,9 @@ void gfunc_call(int nb_args)
 
 
 	    if ((vtop->type.t & VT_BTYPE) == VT_LLONG) {
-		error("long long not supported");
+		tcc_error("long long not supported");
 	    } else if ((vtop->type.t & VT_BTYPE) == VT_LDOUBLE) {
-		error("long double not supported");
+		tcc_error("long double not supported");
 	    } else if ((vtop->type.t & VT_BTYPE) == VT_DOUBLE) {
 		size = 8;
 	    } else {
@@ -2178,34 +2188,34 @@ void gen_opi(int op)
 
 	if (op == TOK_LT) {
 	    C67_CMPLT(r, fr, C67_B2);
-	    C67_invert_test = false;
+	    C67_invert_test = FALSE;
 	} else if (op == TOK_GE) {
 	    C67_CMPLT(r, fr, C67_B2);
-	    C67_invert_test = true;
+	    C67_invert_test = TRUE;
 	} else if (op == TOK_GT) {
 	    C67_CMPGT(r, fr, C67_B2);
-	    C67_invert_test = false;
+	    C67_invert_test = FALSE;
 	} else if (op == TOK_LE) {
 	    C67_CMPGT(r, fr, C67_B2);
-	    C67_invert_test = true;
+	    C67_invert_test = TRUE;
 	} else if (op == TOK_EQ) {
 	    C67_CMPEQ(r, fr, C67_B2);
-	    C67_invert_test = false;
+	    C67_invert_test = FALSE;
 	} else if (op == TOK_NE) {
 	    C67_CMPEQ(r, fr, C67_B2);
-	    C67_invert_test = true;
+	    C67_invert_test = TRUE;
 	} else if (op == TOK_ULT) {
 	    C67_CMPLTU(r, fr, C67_B2);
-	    C67_invert_test = false;
+	    C67_invert_test = FALSE;
 	} else if (op == TOK_UGE) {
 	    C67_CMPLTU(r, fr, C67_B2);
-	    C67_invert_test = true;
+	    C67_invert_test = TRUE;
 	} else if (op == TOK_UGT) {
 	    C67_CMPGTU(r, fr, C67_B2);
-	    C67_invert_test = false;
+	    C67_invert_test = FALSE;
 	} else if (op == TOK_ULE) {
 	    C67_CMPGTU(r, fr, C67_B2);
-	    C67_invert_test = true;
+	    C67_invert_test = TRUE;
 	} else if (op == '+')
 	    C67_ADD(fr, r);	// ADD  r,fr,r
 	else if (op == '-')
@@ -2325,7 +2335,7 @@ void gen_opf(int op)
 
 
     if ((ft & VT_BTYPE) == VT_LDOUBLE)
-	error("long doubles not supported");
+	tcc_error("long doubles not supported");
 
     if (op >= TOK_ULT && op <= TOK_GT) {
 
@@ -2340,42 +2350,42 @@ void gen_opf(int op)
 	    else
 		C67_CMPLTSP(r, fr, C67_B2);
 
-	    C67_invert_test = false;
+	    C67_invert_test = FALSE;
 	} else if (op == TOK_GE) {
 	    if ((ft & VT_BTYPE) == VT_DOUBLE)
 		C67_CMPLTDP(r, fr, C67_B2);
 	    else
 		C67_CMPLTSP(r, fr, C67_B2);
 
-	    C67_invert_test = true;
+	    C67_invert_test = TRUE;
 	} else if (op == TOK_GT) {
 	    if ((ft & VT_BTYPE) == VT_DOUBLE)
 		C67_CMPGTDP(r, fr, C67_B2);
 	    else
 		C67_CMPGTSP(r, fr, C67_B2);
 
-	    C67_invert_test = false;
+	    C67_invert_test = FALSE;
 	} else if (op == TOK_LE) {
 	    if ((ft & VT_BTYPE) == VT_DOUBLE)
 		C67_CMPGTDP(r, fr, C67_B2);
 	    else
 		C67_CMPGTSP(r, fr, C67_B2);
 
-	    C67_invert_test = true;
+	    C67_invert_test = TRUE;
 	} else if (op == TOK_EQ) {
 	    if ((ft & VT_BTYPE) == VT_DOUBLE)
 		C67_CMPEQDP(r, fr, C67_B2);
 	    else
 		C67_CMPEQSP(r, fr, C67_B2);
 
-	    C67_invert_test = false;
+	    C67_invert_test = FALSE;
 	} else if (op == TOK_NE) {
 	    if ((ft & VT_BTYPE) == VT_DOUBLE)
 		C67_CMPEQDP(r, fr, C67_B2);
 	    else
 		C67_CMPEQSP(r, fr, C67_B2);
 
-	    C67_invert_test = true;
+	    C67_invert_test = TRUE;
 	} else {
 	    ALWAYS_ASSERT(FALSE);
 	}
@@ -2477,7 +2487,7 @@ void gen_cvt_ftoi(int t)
     r = vtop->r;
 
     if (t != VT_INT)
-	error("long long not supported");
+	tcc_error("long long not supported");
     else {
 	if ((vtop->type.t & VT_BTYPE) == VT_DOUBLE) {
 	    C67_DPTRUNC(r, r);
@@ -2544,5 +2554,7 @@ void ggoto(void)
     vtop--;
 }
 
-/* end of X86 code generator */
+/* end of C67 code generator */
+/*************************************************************/
+#endif
 /*************************************************************/

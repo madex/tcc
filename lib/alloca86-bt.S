@@ -1,7 +1,5 @@
 /* ---------------------------------------------- */
-/* alloca86b.S */
-
-#include "../config.h"
+/* alloca86-bt.S */
 
 .globl __bound_alloca
 
@@ -42,4 +40,8 @@ p6:
     push    %edx
     ret
 
+/* mark stack as nonexecutable */
+#if defined __ELF__ && defined __linux__
+    .section    .note.GNU-stack,"",@progbits
+#endif
 /* ---------------------------------------------- */
