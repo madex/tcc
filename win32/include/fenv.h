@@ -1,11 +1,29 @@
 /**
- * This file has no copyright assigned and is placed in the Public Domain.
- * This file is part of the w64 mingw-runtime package.
- * No warranty is given; refer to the file DISCLAIMER within this package.
+ * @file fenv.h
+ * Copyright 2012, 2013 MinGW.org project
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 #ifndef _FENV_H_
 #define _FENV_H_
-
+#pragma GCC system_header
 #include <_mingw.h>
 
 /* FPU status word exception flags */
@@ -29,6 +47,10 @@
 #define __MXCSR_EXCEPT_FLAG_SHIFT 0
 
 /* How much to shift FE status word exception flags
+   to get the MXCSR exeptions masks,  */
+#define __MXCSR_EXCEPT_MASK_SHIFT 7
+
+/* How much to shift FE control word rounding flags
    to get MXCSR rounding flags,  */
 #define __MXCSR_ROUND_FLAG_SHIFT 3
 
@@ -56,9 +78,9 @@ typedef struct
   unsigned short __ip_selector;  
   unsigned short __opcode;
   unsigned int	 __data_offset;
-  unsigned short __data_selector;  
-  unsigned short __unused3;
-  unsigned int   __mxcsr; /* contents of the MXCSR register  */
+  unsigned short __data_selector;
+  unsigned short  __unused3;
+  unsigned int __mxcsr; /* contents of the MXCSR register  */
 } fenv_t;
 
 
@@ -82,23 +104,23 @@ extern "C" {
 /*TODO: Some of these could be inlined */
 /* 7.6.2 Exception */
 
-extern int __cdecl feclearexcept (int);
-extern int __cdecl fegetexceptflag (fexcept_t * flagp, int excepts);
-extern int __cdecl feraiseexcept (int excepts );
-extern int __cdecl fesetexceptflag (const fexcept_t *, int);
-extern int __cdecl fetestexcept (int excepts);
+extern int __cdecl __MINGW_NOTHROW feclearexcept (int);
+extern int __cdecl __MINGW_NOTHROW fegetexceptflag (fexcept_t * flagp, int excepts);
+extern int __cdecl __MINGW_NOTHROW feraiseexcept (int excepts );
+extern int __cdecl __MINGW_NOTHROW fesetexceptflag (const fexcept_t *, int);
+extern int __cdecl __MINGW_NOTHROW fetestexcept (int excepts);
 
 /* 7.6.3 Rounding */
 
-extern int __cdecl fegetround (void);
-extern int __cdecl fesetround (int mode);
+extern int __cdecl __MINGW_NOTHROW fegetround (void);
+extern int __cdecl __MINGW_NOTHROW fesetround (int mode);
 
 /* 7.6.4 Environment */
 
-extern int __cdecl fegetenv(fenv_t * envp);
-extern int __cdecl fesetenv(const fenv_t * );
-extern int __cdecl feupdateenv(const fenv_t *);
-extern int __cdecl feholdexcept(fenv_t *);
+extern int __cdecl __MINGW_NOTHROW fegetenv (fenv_t * envp);
+extern int __cdecl __MINGW_NOTHROW fesetenv (const fenv_t * );
+extern int __cdecl __MINGW_NOTHROW feupdateenv (const fenv_t *);
+extern int __cdecl __MINGW_NOTHROW feholdexcept (fenv_t *);
 
 #ifdef __cplusplus
 }

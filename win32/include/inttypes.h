@@ -1,14 +1,33 @@
 /**
- * This file has no copyright assigned and is placed in the Public Domain.
- * This file is part of the w64 mingw-runtime package.
- * No warranty is given; refer to the file DISCLAIMER within this package.
+ * @file inttypes.h
+ * Copyright 2012, 2013 MinGW.org project
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
-/* 7.8 Format conversion of integer types <inttypes.h> */
-
 #ifndef _INTTYPES_H_
 #define _INTTYPES_H_
-
+#pragma GCC system_header
 #include <_mingw.h>
+
+/* 7.8 Format conversion of integer types <inttypes.h> */
+
 #include <stdint.h>
 #define __need_wchar_t
 #include <stddef.h>
@@ -137,6 +156,22 @@ typedef struct {
 
 #define PRIXMAX "I64X"
 
+#ifdef _WIN64
+#define PRIdPTR "I64d"
+#define PRIiPTR "I64i"
+#define PRIoPTR "I64o"
+#define PRIuPTR "I64u"
+#define PRIxPTR "I64x"
+#define PRIXPTR "I64X"
+#else
+#define PRIdPTR "d"
+#define PRIiPTR "i"
+#define PRIoPTR "o"
+#define PRIuPTR "u"
+#define PRIxPTR "x"
+#define PRIXPTR "X"
+#endif
+
 /*
  *   fscanf macros for signed int types
  *   NOTE: if 32-bit int is used for int_fast8_t and int_fast16_t
@@ -217,29 +252,17 @@ typedef struct {
 #define SCNuMAX "I64u"
 
 #ifdef _WIN64
-#define PRIdPTR "I64d"
-#define PRIiPTR "I64i"
-#define PRIoPTR "I64o"
-#define PRIuPTR "I64u"
-#define PRIxPTR "I64x"
-#define PRIXPTR "I64X"
 #define SCNdPTR "I64d"
 #define SCNiPTR "I64i"
 #define SCNoPTR "I64o"
 #define SCNxPTR "I64x"
 #define SCNuPTR "I64u"
 #else
-#define PRIdPTR "d"
-#define PRIiPTR "i"
-#define PRIoPTR "o"
-#define PRIuPTR "u"
-#define PRIxPTR "x"
-#define PRIXPTR "X"
 #define SCNdPTR "d"
 #define SCNiPTR "i"
 #define SCNoPTR "o"
 #define SCNxPTR "x"
- #define SCNuPTR "u"
+#define SCNuPTR "u"
 #endif
 
 #if defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
@@ -273,21 +296,23 @@ typedef struct {
 
 #endif	/* !defined(__cplusplus) || defined(__STDC_FORMAT_MACROS) */
 
-intmax_t __cdecl imaxabs (intmax_t j);
-__CRT_INLINE intmax_t __cdecl imaxabs (intmax_t j)
+intmax_t __cdecl __MINGW_NOTHROW imaxabs (intmax_t j);
+#ifndef __NO_INLINE__
+__CRT_INLINE intmax_t __cdecl __MINGW_NOTHROW imaxabs (intmax_t j)
 	{return	(j >= 0 ? j : -j);}
-imaxdiv_t __cdecl imaxdiv (intmax_t numer, intmax_t denom);
+#endif
+imaxdiv_t __cdecl __MINGW_NOTHROW imaxdiv (intmax_t numer, intmax_t denom);
 
 /* 7.8.2 Conversion functions for greatest-width integer types */
 
-intmax_t __cdecl strtoimax (const char* __restrict__ nptr,
+intmax_t __cdecl __MINGW_NOTHROW strtoimax (const char* __restrict__ nptr,
                             char** __restrict__ endptr, int base);
-uintmax_t __cdecl strtoumax (const char* __restrict__ nptr,
+uintmax_t __cdecl __MINGW_NOTHROW strtoumax (const char* __restrict__ nptr,
 			     char** __restrict__ endptr, int base);
 
-intmax_t __cdecl wcstoimax (const wchar_t* __restrict__ nptr,
+intmax_t __cdecl __MINGW_NOTHROW wcstoimax (const wchar_t* __restrict__ nptr,
                             wchar_t** __restrict__ endptr, int base);
-uintmax_t __cdecl wcstoumax (const wchar_t* __restrict__ nptr,
+uintmax_t __cdecl __MINGW_NOTHROW wcstoumax (const wchar_t* __restrict__ nptr,
 			     wchar_t** __restrict__ endptr, int base);
 
 #ifdef	__cplusplus

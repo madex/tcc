@@ -1,68 +1,83 @@
 /**
- * This file has no copyright assigned and is placed in the Public Domain.
- * This file is part of the w64 mingw-runtime package.
- * No warranty is given; refer to the file DISCLAIMER within this package.
+ * @file direct.h
+ * Copyright 2012, 2013 MinGW.org project
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _INC_DIRECT
-#define _INC_DIRECT
-
+#ifndef	_DIRECT_H_
+#define	_DIRECT_H_
+#pragma GCC system_header
 #include <_mingw.h>
+
+#define __need_wchar_t
+#ifndef RC_INVOKED
+#include <stddef.h>
+#endif	/* Not RC_INVOKED */
+
 #include <io.h>
 
-#pragma pack(push,_CRT_PACKING)
+#ifndef RC_INVOKED
 
-#ifdef __cplusplus
+#ifdef	__cplusplus
 extern "C" {
 #endif
 
 #ifndef _DISKFREE_T_DEFINED
+/* needed by _getdiskfree (also in dos.h) */
+struct _diskfree_t {
+	unsigned total_clusters;
+	unsigned avail_clusters;
+	unsigned sectors_per_cluster;
+	unsigned bytes_per_sector;
+};
 #define _DISKFREE_T_DEFINED
-  struct _diskfree_t {
-    unsigned total_clusters;
-    unsigned avail_clusters;
-    unsigned sectors_per_cluster;
-    unsigned bytes_per_sector;
-  };
-#endif
+#endif  
 
-  _CRTIMP char *__cdecl _getcwd(char *_DstBuf,int _SizeInBytes);
-  _CRTIMP char *__cdecl _getdcwd(int _Drive,char *_DstBuf,int _SizeInBytes);
-  char *__cdecl _getdcwd_nolock(int _Drive,char *_DstBuf,int _SizeInBytes);
-  _CRTIMP int __cdecl _chdir(const char *_Path);
-  _CRTIMP int __cdecl _mkdir(const char *_Path);
-  _CRTIMP int __cdecl _rmdir(const char *_Path);
-  _CRTIMP int __cdecl _chdrive(int _Drive);
-  _CRTIMP int __cdecl _getdrive(void);
-  _CRTIMP unsigned long __cdecl _getdrives(void);
+/*
+ * You really shouldn't be using these. Use the Win32 API functions instead.
+ * However, it does make it easier to port older code.
+ */
+_CRTIMP int __cdecl __MINGW_NOTHROW _getdrive (void);
+_CRTIMP unsigned long __cdecl __MINGW_NOTHROW _getdrives(void);
+_CRTIMP int __cdecl __MINGW_NOTHROW _chdrive (int);
+_CRTIMP char* __cdecl __MINGW_NOTHROW _getdcwd (int, char*, int);
+_CRTIMP unsigned __cdecl __MINGW_NOTHROW _getdiskfree (unsigned, struct _diskfree_t *);
 
-#ifndef _GETDISKFREE_DEFINED
-#define _GETDISKFREE_DEFINED
-  _CRTIMP unsigned __cdecl _getdiskfree(unsigned _Drive,struct _diskfree_t *_DiskFree);
+#ifndef	_NO_OLDNAMES
+# define diskfree_t _diskfree_t
 #endif
 
 #ifndef _WDIRECT_DEFINED
+/* wide character versions. Also in wchar.h */
+_CRTIMP int __cdecl __MINGW_NOTHROW _wchdir(const wchar_t*);
+_CRTIMP wchar_t* __cdecl __MINGW_NOTHROW _wgetcwd(wchar_t*, int);
+_CRTIMP wchar_t* __cdecl __MINGW_NOTHROW _wgetdcwd(int, wchar_t*, int);
+_CRTIMP int __cdecl __MINGW_NOTHROW _wmkdir(const wchar_t*);
+_CRTIMP int __cdecl __MINGW_NOTHROW _wrmdir(const wchar_t*);
 #define _WDIRECT_DEFINED
-  _CRTIMP wchar_t *__cdecl _wgetcwd(wchar_t *_DstBuf,int _SizeInWords);
-  _CRTIMP wchar_t *__cdecl _wgetdcwd(int _Drive,wchar_t *_DstBuf,int _SizeInWords);
-  wchar_t *__cdecl _wgetdcwd_nolock(int _Drive,wchar_t *_DstBuf,int _SizeInWords);
-  _CRTIMP int __cdecl _wchdir(const wchar_t *_Path);
-  _CRTIMP int __cdecl _wmkdir(const wchar_t *_Path);
-  _CRTIMP int __cdecl _wrmdir(const wchar_t *_Path);
 #endif
 
-#ifndef	NO_OLDNAMES
-
-#define diskfree_t _diskfree_t
-
-  char *__cdecl getcwd(char *_DstBuf,int _SizeInBytes);
-  int __cdecl chdir(const char *_Path);
-  int __cdecl mkdir(const char *_Path);
-  int __cdecl rmdir(const char *_Path);
-#endif
-
-#ifdef __cplusplus
+#ifdef	__cplusplus
 }
 #endif
 
-#pragma pack(pop)
-#endif
+#endif	/* Not RC_INVOKED */
+
+#endif	/* Not _DIRECT_H_ */

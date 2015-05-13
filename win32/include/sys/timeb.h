@@ -1,133 +1,96 @@
 /**
- * This file has no copyright assigned and is placed in the Public Domain.
- * This file is part of the w64 mingw-runtime package.
- * No warranty is given; refer to the file DISCLAIMER within this package.
+ * @file timeb.h
+ * Copyright 2012, 2013 MinGW.org project
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
-#ifndef _TIMEB_H_
-#define _TIMEB_H_
-
+#ifndef	_TIMEB_H_
+#define	_TIMEB_H_
+#pragma GCC system_header
 #include <_mingw.h>
 
-#ifndef _WIN32
-#error Only Win32 target is supported!
-#endif
+/*
+ * Support for the UNIX System V ftime system call.
+ */
 
-#pragma pack(push,_CRT_PACKING)
+#include <sys/types.h>
 
-#ifdef __cplusplus
+#ifndef	RC_INVOKED
+
+#ifdef	__cplusplus
 extern "C" {
 #endif
 
-#ifndef _CRTIMP
-#define _CRTIMP __declspec(dllimport)
-#endif
+/*
+ * TODO: Structure not tested.
+ */
+struct __timeb32
+{
+	__time32_t	time;
+	short	millitm;
+	short	timezone;
+	short	dstflag;
+};
 
-#ifndef __TINYC__ //gr
-#ifdef _USE_32BIT_TIME_T
-#ifdef _WIN64
-#undef _USE_32BIT_TIME_T
-#endif
-#else
-#if _INTEGRAL_MAX_BITS < 64
-#define _USE_32BIT_TIME_T
-#endif
-#endif
-#endif
-
-#ifndef _TIME32_T_DEFINED
-  typedef long __time32_t;
-#define _TIME32_T_DEFINED
-#endif
-
-#ifndef _TIME64_T_DEFINED
-#if _INTEGRAL_MAX_BITS >= 64
-  typedef __int64 __time64_t;
-#endif
-#define _TIME64_T_DEFINED
-#endif
-
-#ifndef _TIME_T_DEFINED
-#ifdef _USE_32BIT_TIME_T
-  typedef __time32_t time_t;
-#else
-  typedef __time64_t time_t;
-#endif
-#define _TIME_T_DEFINED
-#endif
-
-#ifndef _TIMEB_DEFINED
-#define _TIMEB_DEFINED
-
-  struct __timeb32 {
-    __time32_t time;
-    unsigned short millitm;
-    short timezone;
-    short dstflag;
-  };
-
-#ifndef	NO_OLDNAMES
-  struct timeb {
-    time_t time;
-    unsigned short millitm;
-    short timezone;
-    short dstflag;
-  };
-#endif
-
-#if _INTEGRAL_MAX_BITS >= 64
-  struct __timeb64 {
-    __time64_t time;
-    unsigned short millitm;
-    short timezone;
-    short dstflag;
-  };
-#endif
+/* This requires newer versions of msvcrt.dll (6.10 or higher).  */
+struct __timeb64
+{
+  __time64_t time;
+  short millitm;
+  short timezone;
+  short dstflag;
+};
 
 #ifdef _USE_32BIT_TIME_T
 #define _timeb __timeb32
-//gr #define _ftime _ftime32
-#define _ftime32 _ftime
 #else
 #define _timeb __timeb64
+#endif
+
+_CRTIMP void __cdecl __MINGW_NOTHROW	_ftime (struct _timeb*);
+_CRTIMP void __cdecl __MINGW_NOTHROW	_ftime64 (struct __timeb64*);
+
+#if MSVCRT_VERSION >= 800
+_CRTIMP void __cdecl __MINGW_NOTHROW	_ftime32 (struct __timeb32*);
+#else
+_CRTALIAS void __cdecl __MINGW_NOTHROW  _ftime32 (struct __timeb32* _v1) {
+    return _ftime((struct _timeb *)_v1);
+}
+#endif
+
+#if defined(_USE_32BIT_TIME_T)
+#define _ftime _ftime32
+
+#else
 #define _ftime _ftime64
 #endif
-#endif
 
-  _CRTIMP void __cdecl _ftime32(struct __timeb32 *_Time);
-#if _INTEGRAL_MAX_BITS >= 64
-  _CRTIMP void __cdecl _ftime64(struct __timeb64 *_Time);
-#endif
+#ifndef	_NO_OLDNAMES
+#define ftime _ftime
+#define timeb _timeb
+#endif	/* Not _NO_OLDNAMES */
 
-#ifndef _TIMESPEC_DEFINED
-#define _TIMESPEC_DEFINED
-struct timespec {
-  time_t  tv_sec;   /* Seconds */
-  long    tv_nsec;  /* Nanoseconds */
-};
-
-struct itimerspec {
-  struct timespec  it_interval;  /* Timer period */
-  struct timespec  it_value;     /* Timer expiration */
-};
-#endif
-
-#if !defined (RC_INVOKED) && !defined (NO_OLDNAMES)
-#ifdef _USE_32BIT_TIME_T
-__CRT_INLINE void __cdecl ftime(struct timeb *_Tmb) {
-  _ftime32((struct __timeb32 *)_Tmb);
-}
-#else
-__CRT_INLINE void __cdecl ftime(struct timeb *_Tmb) {
-  _ftime64((struct __timeb64 *)_Tmb);
-}
-#endif
-#endif
-
-#ifdef __cplusplus
+#ifdef	__cplusplus
 }
 #endif
 
-#pragma pack(pop)
+#endif	/* Not RC_INVOKED */
 
-#include <sec_api/sys/timeb_s.h>
-#endif
+#endif	/* Not _TIMEB_H_ */
