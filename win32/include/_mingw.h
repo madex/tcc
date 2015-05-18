@@ -138,7 +138,8 @@
  * function here; DO NOT change it, without rebuilding the runtime.
  */
 #define __CRT_GLOB_ESCAPE_CHAR__	(char)(127)
-
+#include <stddef.h>
+#include <stdarg.h>
 #define __cdecl __attribute__((__cdecl__))
 #define __declspec(x) __attribute__((x))
 #define __unaligned __attribute__((packed))
@@ -365,4 +366,60 @@ typedef unsigned int wint_t;
 #define _USE_32BIT_TIME_T
 #define __TRY__ void __try__(void**), *_sehrec[6]; __try__(_sehrec);
 #endif
+
+/* in stddef.h */
+#define _SIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
+#define _PTRDIFF_T_DEFINED
+#define _WCHAR_T_DEFINED
+#define _UINTPTR_T_DEFINED
+#define _INTPTR_T_DEFINED
+
+#define _INTEGRAL_MAX_BITS 64
+
+typedef long __time32_t;
+#define _TIME32_T_DEFINED
+typedef __int64 __time64_t;
+#define _TIME64_T_DEFINED
+#ifdef _USE_32BIT_TIME_T
+typedef __time32_t time_t;
+#define _TIME_T_DEFINED
+#else
+typedef __time64_t time_t;
+#define _TIME_T_DEFINED
+#endif
+
+typedef unsigned long size_t;
+#define _SIZE_T_DEFINED
+typedef long ssize_t;
+#define _SSIZE_T_DEFINED
+
+typedef unsigned int wint_t;
+typedef unsigned short wctype_t;
+#define _WCTYPE_T_DEFINED
+typedef unsigned short wchar_t;
+#define _WCHAR_T_DEFINED
+
+typedef int errno_t;
+#define _ERRCODE_DEFINED
+
+typedef struct threadlocaleinfostruct *pthreadlocinfo;
+typedef struct threadmbcinfostruct *pthreadmbcinfo;
+typedef struct localeinfo_struct _locale_tstruct,*_locale_t;
+
+/* for winapi */
+#define DECLARE_STDCALL_P(type) __stdcall type
+#define NOSERVICE 1
+#define NOMCX 1
+#define NOIME 1
+#ifndef WIN32_LEAN_AND_MEAN
+# define WIN32_LEAN_AND_MEAN 1
+#endif
+#ifndef WINVER
+# define WINVER 0x0502
+#endif
+#ifndef _WIN32_WINNT
+# define _WIN32_WINNT 0x502
+#endif
+
 #endif /* __MINGW_H */
